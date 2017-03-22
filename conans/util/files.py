@@ -51,6 +51,14 @@ def sha1sum(file_path):
     return _generic_algorithm_sum(file_path, "sha1")
 
 
+def sha256sum(file_path):
+    return _generic_algorithm_sum(file_path, "sha256")
+
+
+def sha512sum(file_path):
+    return _generic_algorithm_sum(file_path, "sha512")
+
+
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:

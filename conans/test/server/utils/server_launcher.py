@@ -6,7 +6,7 @@ from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.util.log import logger
-from conans.util.files import mkdir
+from conans.util.files import mkdir, md5sum
 from conans.test.utils.test_files import temp_folder
 from conans.server.migrate import migrate_and_get_server_config
 from conans.search.search import DiskSearchAdapter, DiskSearchManager
@@ -27,7 +27,8 @@ class TestServerLauncher(object):
                  write_permissions=None, users=None, base_url=None, plugins=None,
                  server_version=None,
                  min_client_compatible_version=None,
-                 server_capabilities=None):
+                 server_capabilities=None,
+                 hash_algorithm=None):
 
         plugins = plugins or []
         if not base_path:
@@ -38,6 +39,8 @@ class TestServerLauncher(object):
 
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
+
+        hash_algorithm = hash_algorithm or md5sum
 
         # Define storage_folder, if not, it will be readed from conf file and pointed to real user home
         self.storage_folder = os.path.join(base_path, ".conan_server", "data")
@@ -52,7 +55,8 @@ class TestServerLauncher(object):
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
         self.file_manager = get_file_manager(server_config, public_url=base_url,
-                                             updown_auth_manager=updown_auth_manager)
+                                             updown_auth_manager=updown_auth_manager,
+                                             hash_algorithm=hash_algorithm)
 
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(SimplePaths(server_config.disk_storage_path), search_adapter)

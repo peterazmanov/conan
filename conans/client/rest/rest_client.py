@@ -5,7 +5,7 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, md5sum, sha256sum, sha512sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -180,7 +180,8 @@ class RestApiClient(object):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
+        digest_alg = detect_digest_algorithm(remote_snapshot)
+        local_snapshot = {filename: digest_alg(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -209,7 +210,8 @@ class RestApiClient(object):
         t1 = time.time()
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
+        digest_alg = detect_digest_algorithm(remote_snapshot)
+        local_snapshot = {filename: digest_alg(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -486,3 +488,13 @@ class RestApiClient(object):
                                  % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
+
+
+def detect_digest_algorithm(snapshot):
+    if not snapshot:
+        return md5sum
+    else:
+        bitlen = len(snapshot.items()[0][1]) * 4  # 2 chars => 8 bits
+        return {128: md5sum,
+                256: sha256sum,
+                512: sha512sum}.get(bitlen, md5sum)

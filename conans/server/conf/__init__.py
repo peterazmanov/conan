@@ -8,7 +8,7 @@ import os
 import random
 import string
 from conans.errors import ConanException
-from conans.util.files import save, mkdir
+from conans.util.files import save, mkdir, md5sum
 from six.moves.configparser import ConfigParser, NoSectionError
 from conans.paths import SimplePaths, conan_expand_user
 from conans.server.store.disk_adapter import ServerDiskAdapter
@@ -204,14 +204,14 @@ class ConanServerConfigParser(ConfigParser):
             return timedelta(minutes=tmp)
 
 
-def get_file_manager(config, public_url=None, updown_auth_manager=None):
+def get_file_manager(config, public_url=None, updown_auth_manager=None, hash_algorithm=None):
     store_adapter = config.store_adapter
     if store_adapter == "disk":
         public_url = public_url or config.public_url
         disk_controller_url = "%s/%s" % (public_url, "files")
         if not updown_auth_manager:
             raise Exception("Updown auth manager needed for disk controller (not s3)")
-        adapter = ServerDiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager)
+        adapter = ServerDiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager, hash_algorithm)
         paths = SimplePaths(config.disk_storage_path)
     else:
         # Want to develop new adapter? create a subclass of

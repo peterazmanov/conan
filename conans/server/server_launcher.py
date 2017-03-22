@@ -12,6 +12,7 @@ from conans import __version__ as SERVER_VERSION
 from conans.paths import conan_expand_user, SimplePaths
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans import SERVER_CAPABILITIES
+from conans.util.files import md5sum
 
 
 def load_authentication_plugin(server_folder, plugin_name):
@@ -48,7 +49,7 @@ class ServerLauncher(object):
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
 
-        file_manager = get_file_manager(server_config, updown_auth_manager=updown_auth_manager)
+        file_manager = get_file_manager(server_config, updown_auth_manager=updown_auth_manager, hash_algorithm=md5sum)
 
         search_adapter = DiskSearchAdapter()
         search_manager = DiskSearchManager(SimplePaths(server_config.disk_storage_path),

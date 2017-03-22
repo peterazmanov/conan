@@ -34,11 +34,12 @@ class ServerStorageAdapter(object):
 class ServerDiskAdapter(ServerStorageAdapter):
     '''Manage access to disk files with common methods required
     for conan operations'''
-    def __init__(self, base_url, base_storage_path, updown_auth_manager):
+    def __init__(self, base_url, base_storage_path, updown_auth_manager, hash_algorithm):
         """
         :param: base_url Base url for generate urls to download and upload operations"""
 
         self.base_url = base_url
+        self.hash_algorithm = hash_algorithm
         # URLs are generated removing this base path
         self.updown_auth_manager = updown_auth_manager
         self._store_folder = base_storage_path
@@ -86,7 +87,7 @@ class ServerDiskAdapter(ServerStorageAdapter):
         if files_subset is not None:
             paths = set(paths).intersection(set(files_subset))
         abs_paths = [os.path.join(absolute_path, relpath) for relpath in paths]
-        return {filepath: md5sum(filepath) for filepath in abs_paths}
+        return {filepath: self.hash_algorithm(filepath) for filepath in abs_paths}
 
     def delete_folder(self, path):
         '''Delete folder from disk. Path already contains base dir'''

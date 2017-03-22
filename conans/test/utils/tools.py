@@ -171,7 +171,7 @@ class TestServer(object):
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_version=Version(SERVER_VERSION),
                  min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                 server_capabilities=None):
+                 server_capabilities=None, hash_algorithm=None):
         """
              'read_permissions' and 'write_permissions' is a list of:
                  [("opencv/2.3.4@lasote/testing", "user1, user2")]
@@ -197,7 +197,8 @@ class TestServer(object):
                                               plugins=plugins,
                                               server_version=server_version,
                                               min_client_compatible_version=min_client_ver,
-                                              server_capabilities=server_capabilities)
+                                              server_capabilities=server_capabilities,
+                                              hash_algorithm=hash_algorithm)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property

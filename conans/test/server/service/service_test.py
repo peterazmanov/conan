@@ -87,7 +87,7 @@ class ConanServiceTest(unittest.TestCase):
         self.fake_url = "http://url"
         updown_auth_manager = JWTUpDownAuthManager("secret",
                                                    timedelta(seconds=200))
-        adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
+        adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager, md5sum)
         self.paths = SimplePaths(self.tmp_dir)
         self.file_manager = FileManager(self.paths, adapter)
 
