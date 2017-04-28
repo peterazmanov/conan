@@ -89,13 +89,18 @@ _target_template = """
                                   CONAN_FULLPATH_LIBS_{uname}_RELEASE)
 
     add_library({name} INTERFACE IMPORTED)
-    # foreach(build_type "" "_DEBUG" "_RELEASE")
-    #    string(REPLACE " " ";" "CONAN_C_FLAGS_{uname}${{build_type}}"     "${{CONAN_C_FLAGS_{uname}${{build_type}}}}")
-    #    string(REPLACE " " ";" "CONAN_CXX_FLAGS_{uname}${{build_type}}"   "${{CONAN_CXX_FLAGS_{uname}${{build_type}}}}")
-    #    string(REPLACE " " ";" "CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}" "${{CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}}}")
-    #    string(REPLACE " " ";" "CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}"    "${{CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}}}")
-    # endforeach()
+    foreach(build_type "" "_DEBUG" "_RELEASE")
+       string(REPLACE " " ";" "CONAN_C_FLAGS_{uname}${{build_type}}"     "${{CONAN_C_FLAGS_{uname}${{build_type}}}}")
+       string(REPLACE " " ";" "CONAN_CXX_FLAGS_{uname}${{build_type}}"   "${{CONAN_CXX_FLAGS_{uname}${{build_type}}}}")
+       string(REPLACE " " ";" "CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}" "${{CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}}}")
+       string(REPLACE " " ";" "CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}"    "${{CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}}}")
+    endforeach()
 
+    MESSAGE("${{CONAN_CXX_FLAGS_{uname}${{build_type}}}}")
+    MESSAGE("${{CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}}}")
+    MESSAGE("${{CONAN_C_FLAGS_{uname}${{build_type}}}}")
+    MESSAGE("${{CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}}}")
+    
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
                                                                  $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE_LIST}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
