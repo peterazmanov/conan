@@ -4,6 +4,7 @@ from nose.plugins.attrib import attr
 import platform
 import os
 from conans.test.utils.multi_config import multi_config_files
+from conans.util.files import load
 
 conanfile_py = """
 from conans import ConanFile, CMake
@@ -151,11 +152,17 @@ class CMakeMultiTest(unittest.TestCase):
 
         # better in one test instead of two, because install time is amortized
         for cmake_file in (cmake, cmake_targets, ):
+            from conans.util.log import logger
+
+            logger.warn("CMAKE=>%s" % cmake_file)
             client.save({"conanfile.txt": conanfile,
                          "CMakeLists.txt": cmake_file,
                          "main.cpp": main}, clean_first=True)
             client.run('install -s build_type=Debug %s --build=missing' % debug_install)
             client.run('install -s build_type=Release %s --build=missing' % release_install)
+            logger.warn(load(os.path.join(client.current_folder, "conanbuildinfo_release.cmake")))
+            logger.warn("!!!!!!!!!!!!!! AND DEBUG:")
+            logger.warn(load(os.path.join(client.current_folder, "conanbuildinfo_debug.cmake")))
 
             client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
