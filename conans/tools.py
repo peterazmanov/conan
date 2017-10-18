@@ -7,6 +7,8 @@ from conans.client.output import ConanOutput
 # noinspection PyUnresolvedReferences
 from conans.util.files import (_generic_algorithm_sum, load, save, sha256sum,
                                sha1sum, md5sum, md5, touch, relative_dirs, rmdir, mkdir)
+from uuid import getnode as get_mac
+import hashlib
 
 
 # Global instances
@@ -26,3 +28,9 @@ def set_global_instances(the_output, the_requester):
 
 
 set_global_instances(ConanOutput(sys.stdout), requests)
+
+
+def get_mac_digest():
+    sha1 = hashlib.sha1()
+    sha1.update(str(get_mac()).encode())
+    return str(sha1.hexdigest())

@@ -40,7 +40,8 @@ class TestServerLauncher(object):
             raise Exception("Base path not exist! %s")
 
         # Define storage_folder, if not, it will be readed from conf file and pointed to real user home
-        self.storage_folder = os.path.join(base_path, ".conan_server", "data")
+        server_folder = os.path.join(base_path, '.conan_server')
+        self.storage_folder = os.path.join(server_folder, "data")
         mkdir(self.storage_folder)
 
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
@@ -81,7 +82,7 @@ class TestServerLauncher(object):
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.file_manager, self.search_manager,
                               server_version, min_client_compatible_version,
-                              server_capabilities)
+                              server_capabilities, server_folder, ch_enabled=False)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
 

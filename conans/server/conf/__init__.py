@@ -19,6 +19,7 @@ from conans.server.conf.default_server_conf import default_server_conf
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
 
+
 class ConanServerConfigParser(ConfigParser):
     """ defines the configuration of the server. It can load
     values from environment variables or from file.
@@ -44,7 +45,9 @@ class ConanServerConfigParser(ConfigParser):
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
                            "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
                            # "user:pass,user2:pass2"
-                           "users": get_env("CONAN_SERVER_USERS", None, environment)}
+                           "users": get_env("CONAN_SERVER_USERS", None, environment),
+                           "call_home_enabled": get_env("CONAN_SERVER_CALL_HOME_ENABLED", True, environment)
+                           }
 
     def _get_file_conf(self, section, varname=None):
         """Gets the section from config file or raises an exception"""
@@ -80,6 +83,10 @@ class ConanServerConfigParser(ConfigParser):
         else:
             return self._get_file_conf("server", "ssl_enabled").lower() == "true" or \
                    self._get_file_conf("server", "ssl_enabled").lower() == "1"
+
+    @property
+    def call_home_enabled(self):
+        return self.env_config["call_home_enabled"]
 
     @property
     def port(self):

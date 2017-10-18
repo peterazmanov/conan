@@ -1,4 +1,8 @@
 import bottle
+import os
+
+from future.backports import datetime
+
 from conans.server.rest.api_v1 import ApiV1
 from conans.model.version import Version
 
@@ -15,7 +19,7 @@ class ConanServer(object):
     def __init__(self, run_port, credentials_manager,
                  updown_auth_manager, authorizer, authenticator,
                  file_manager, search_manager, server_version, min_client_compatible_version,
-                 server_capabilities):
+                 server_capabilities, server_folder, ch_enabled=True):
 
         assert(isinstance(server_version, Version))
         assert(isinstance(min_client_compatible_version, Version))
@@ -35,6 +39,12 @@ class ConanServer(object):
         self.api_v1.file_manager = file_manager
 
         self.api_v1.setup()
+        if ch_enabled:
+            from conans.server.stats import CallHomeScheduler
+            ch = CallHomeScheduler(os.path.join(server_folder, ".stats"),
+                                   datetime.timedelta(seconds=5),
+                                   datetime.timedelta(seconds=60))
+            ch.launch_scheduler()
 
     def run(self, **kwargs):
         port = kwargs.pop("port", self.run_port)

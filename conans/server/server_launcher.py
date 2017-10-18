@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import os
+
+from conans.server.rest.bottle_plugins import load_authentication_plugin
 from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
@@ -12,23 +14,6 @@ from conans import __version__ as SERVER_VERSION
 from conans.paths import conan_expand_user, SimplePaths
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans import SERVER_CAPABILITIES
-
-
-def load_authentication_plugin(server_folder, plugin_name):
-    try:
-        from pluginbase import PluginBase
-        plugin_base = PluginBase(package="plugins/authenticator")
-        plugins_dir = os.path.join(server_folder, "plugins", "authenticator")
-        plugin_source = plugin_base.make_plugin_source(
-                        searchpath=[plugins_dir])
-        auth = plugin_source.load_plugin(plugin_name).get_class()
-        # it is necessary to keep a reference to the plugin, otherwise it is removed
-        # and some imports fail
-        auth.plugin_source = plugin_source
-        return auth
-    except:
-        print("Error loading authenticator plugin '%s'" % plugin_name)
-        raise
 
 
 class ServerLauncher(object):
@@ -61,7 +46,7 @@ class ServerLauncher(object):
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, file_manager, search_manager,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                              server_capabilities)
+                              server_capabilities, server_folder, server_config.call_home_enabled)
 
     def launch(self):
         self.ra.run(host="0.0.0.0")

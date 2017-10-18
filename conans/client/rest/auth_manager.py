@@ -14,8 +14,8 @@ Flow:
 
 from conans.errors import AuthenticationException, ForbiddenException,\
     ConanException
-from uuid import getnode as get_mac
-import hashlib
+
+from conans.tools import get_mac_digest
 from conans.util.log import logger
 
 
@@ -111,17 +111,11 @@ class ConanApiAuthManager(object):
                 'Your credentials could not be stored in local cache\n')
             self._user_io.out.debug(str(e) + '\n')
 
-    @staticmethod
-    def get_mac_digest():
-        sha1 = hashlib.sha1()
-        sha1.update(str(get_mac()).encode())
-        return str(sha1.hexdigest())
-
     def set_custom_headers(self, username):
         # First identifies our machine, second the username even if it was not
         # authenticated
         custom_headers = self._rest_client.custom_headers
-        custom_headers['X-Client-Anonymous-Id'] = self.get_mac_digest()
+        custom_headers['X-Client-Anonymous-Id'] = get_mac_digest()
         custom_headers['X-Client-Id'] = str(username or "")
 
     # ######### CONAN API METHODS ##########
