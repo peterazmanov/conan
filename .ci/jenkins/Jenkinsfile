@@ -72,6 +72,7 @@ for (x in slaves) {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
 						}
 						sh(script: "rm -rf /tmp/${workdir}")
+						sh(script: "rm -rf ${WORKSPACE}")
 					}
 					else if(slave == "Windows"){
 						writeFile(file: "tox.ini", text: base_tox + win_tox)
@@ -84,6 +85,7 @@ for (x in slaves) {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
 						}
 						sh(script: "rm -rf /tmp/${workdir}")
+						sh(script: "rm -rf ${WORKSPACE}")
 					}
 				}
             }
@@ -100,6 +102,7 @@ for (y in pyvers) {
 	node("Windows"){
 		stage("REST tests Windows ${pyver}"){
 			bat(script:"tox --workdir c:/tmp/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+			bat(script: "rd /s /q \"${WORKSPACE}"")
 		}
 	}
 }
