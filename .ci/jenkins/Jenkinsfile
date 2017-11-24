@@ -55,8 +55,9 @@ for (x in slaves) {
           node(slave) {
             stage("${slave} - ${pyver}"){
                 def vars = checkout scm
-				commit = vars["GIT_COMMIT"]
-				println vars
+				commit = vars["GIT_COMMIT"].substring(0,10)
+				def workdir = "${commit}/${pyver}"
+				
                 if(slave == "Macos"){
                     writeFile(file: "tox.ini", text: base_tox + mac_tox)
                 }
@@ -70,15 +71,15 @@ for (x in slaves) {
                 def stdout
                 if(slave == "Linux"){
                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- ${linux_args}")
+                        sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
                     }
                 }
                 else if(slave == "Windows"){
-                    bat(script: "tox --workdir c:/tmp/${commit} -e ${pyver} -- ${win_args}")
+                    bat(script: "tox --workdir c:/tmp/${workdir} -e ${pyver} -- ${win_args}")
                 }
                 else if(slave == "Macos"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script: "tox -e ${pyver} -- ${macos_args}")
+                        sh(script: "tox -e --workdir /tmp/${workdir} ${pyver} -- ${macos_args}")
                     }
                 }
             }
@@ -95,7 +96,7 @@ for (y in pyvers) {
     def pyver = y
 	node("Windows"){
 		stage("REST tests Windows ${pyver}"){
-			bat(script:"tox --workdir c:/tmp/{commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+			bat(script:"tox --workdir c:/tmp/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
 		}
 	}
 }
