@@ -2,13 +2,13 @@ def slaves = ['Linux', 'Windows', 'Macos']
 def pyvers = ['py27', 'py34', 'py36']
 
 def win_args = "conans.test -a \"!windows_ci_excluded,!rest_api\" --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
-def linux_args = "-x conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
+def linux_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000"
 def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
 
 def base_tox = """
 [tox]
 envlist = py27,py34,py36
-skipsdist=True
+# skipsdist=True
 # alwayscopy = True
 
 [testenv]
