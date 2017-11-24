@@ -8,10 +8,13 @@ def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000
 def base_tox = """
 [tox]
 envlist = py27,py34,py36
+alwayscopy = True
 
 [testenv]
 passenv = *
-
+deps = -r conans/requirements.txt
+       -r conans/requirements_dev.txt
+       -r conans/requirements_server.txt
 commands=nosetests {posargs: conans.test}
          codecov
 """
