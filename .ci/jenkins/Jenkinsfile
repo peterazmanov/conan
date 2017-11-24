@@ -54,7 +54,8 @@ for (x in slaves) {
         builders["${slave} - ${pyver}"] = {
           node(slave) {
             stage("${slave} - ${pyver}"){
-                checkout scm
+                def vars = checkout scm
+				println vars
                 if(slave == "Macos"){
                     writeFile(file: "tox.ini", text: base_tox + mac_tox)
                 }
