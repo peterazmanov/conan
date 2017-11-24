@@ -13,9 +13,9 @@ skipsdist=True
 
 [testenv]
 passenv = *
-deps = -r conans/requirements.txt
-       -r conans/requirements_dev.txt
-       -r conans/requirements_server.txt
+deps = -rconans/requirements.txt
+       -rconans/requirements_dev.txt
+       -rconans/requirements_server.txt
 commands=nosetests {posargs: conans.test}
          codecov
 """
