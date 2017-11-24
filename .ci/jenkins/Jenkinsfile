@@ -1,9 +1,19 @@
 def slaves = ['Linux', 'Windows', 'Macos']
-def pyvers = ['py27', 'py34', 'py36']
+
+def pyvers 
+Pattern pattern = Pattern.compile("(^release.*)|(^master)");
+Matcher matcher = pattern.matcher(env.BRANCH_NAME);
+if (matcher.matches()) {
+    pyvers = ['py27', 'py34', 'py36']
+}
+else{
+	pyvers = ['py27', 'py36']
+}
+
 
 def win_args   = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
-def linux_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
-def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
+def linux_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
+def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
 
 def base_tox = """
 [tox]
@@ -52,39 +62,31 @@ for (x in slaves) {
     for (y in pyvers) {
         def pyver = y
         builders["${slave} - ${pyver}"] = {
-          node(slave) {
-            stage("${slave} - ${pyver}"){
-                def vars = checkout scm
-				commit = vars["GIT_COMMIT"].substring(0,10)
-				def workdir = "${commit}/${pyver}"
+            node(slave) {
+				stage("${slave} - ${pyver}"){
+					def vars = checkout scm
+					commit = vars["GIT_COMMIT"].substring(0,10)
+					def workdir = "${commit}/${pyver}"
 				
-                if(slave == "Macos"){
-                    writeFile(file: "tox.ini", text: base_tox + mac_tox)
-                }
-                else if(slave == "Linux"){
-                    writeFile(file: "tox.ini", text: base_tox)
-                }
-                else if(slave == "Windows"){
-                  writeFile(file: "tox.ini", text: base_tox + win_tox)
-                }
-            
-                def stdout
-                if(slave == "Linux"){
-                    docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
-                    }
-                }
-                else if(slave == "Windows"){
-                    bat(script: "tox --workdir c:/tmp/${workdir} -e ${pyver} -- ${win_args}")
-                }
-                else if(slave == "Macos"){
-                    withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
-                    }
-                }
+					if(slave == "Linux"){
+						writeFile(file: "tox.ini", text: base_tox)
+						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
+							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
+						}
+					}
+					else if(slave == "Windows"){
+						writeFile(file: "tox.ini", text: base_tox + win_tox)
+						bat(script: "tox --workdir c:/tmp/${workdir} -e ${pyver} -- ${win_args}")
+					}
+					else if(slave == "Macos"){
+						writeFile(file: "tox.ini", text: base_tox + mac_tox)
+						withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
+							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
+						}
+					}
+				}
             }
-          }
-      }
+        }
     }
 }
 
