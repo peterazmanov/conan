@@ -16,6 +16,7 @@ from nose.plugins.attrib import attr
 class ConanEnvTest(unittest.TestCase):
 
     @attr('slow')
+    @attr('windows_ci_excluded')
     def shared_in_current_directory_test(self):
         """
         - There is a package building a shared library

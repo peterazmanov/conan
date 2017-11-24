@@ -18,6 +18,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('slow')
+@attr('rest_api')
 class RestApiTest(unittest.TestCase):
     '''Open a real server (sockets) to test rest_api function.'''
 
