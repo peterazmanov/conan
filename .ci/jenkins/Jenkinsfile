@@ -11,9 +11,7 @@ envlist = py27,py34,py36
 
 [testenv]
 passenv = *
-deps = -r ./conans/requirements.txt
-       -r ./conans/requirements_dev.txt
-       -r ./conans/requirements_server.txt
+
 commands=nosetests {posargs: conans.test}
          codecov
 """
@@ -66,15 +64,15 @@ for (x in slaves) {
                 def stdout
                 if(slave == "Linux"){
                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script:"pwd && ls -la && ls -la .tox && ls -la .tox/${pyver}/bin && tox -e ${pyver} -- ${linux_args}")
+                        sh(script: "tox -e ${pyver} -- ${linux_args}")
                     }
                 }
                 else if(slave == "Windows"){
-                    bat(script:"tox --workdir c:/tmpenv${pyver} -e ${pyver} -- ${win_args}")
+                    bat(script: "tox --workdir c:/tmpenv${pyver} -e ${pyver} -- ${win_args}")
                 }
                 else if(slave == "Macos"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script:"tox -e ${pyver} -- ${macos_args}")
+                        sh(script: "tox -e ${pyver} -- ${macos_args}")
                     }
                 }
             }
