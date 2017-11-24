@@ -1,9 +1,7 @@
 def slaves = ['Linux', 'Windows', 'Macos']
 
 def pyvers 
-Pattern pattern = Pattern.compile("(^release.*)|(^master)");
-Matcher matcher = pattern.matcher(env.BRANCH_NAME);
-if (matcher.matches()) {
+if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     pyvers = ['py27', 'py34', 'py36']
 }
 else{
