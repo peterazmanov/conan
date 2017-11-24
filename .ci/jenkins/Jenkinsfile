@@ -79,7 +79,7 @@ for (x in slaves) {
                 }
                 else if(slave == "Macos"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script: "tox -e --workdir /tmp/${workdir} ${pyver} -- ${macos_args}")
+                        sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
                     }
                 }
             }
