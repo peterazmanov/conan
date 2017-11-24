@@ -2,7 +2,7 @@ def slaves = ['Linux', 'Windows', 'Macos']
 def pyvers = ['py27', 'py34', 'py36']
 
 def win_args = "conans.test -a \"!windows_ci_excluded,!rest_api\" --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
-def linux_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
+def linux_args = "-x conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
 def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage"
 
 def base_tox = """
@@ -11,9 +11,9 @@ envlist = py27,py34,py36
 
 [testenv]
 passenv = *
-deps = -rconans/requirements.txt
-       -rconans/requirements_dev.txt
-       -rconans/requirements_server.txt
+deps = -r ./conans/requirements.txt
+       -r ./conans/requirements_dev.txt
+       -r ./conans/requirements_server.txt
 commands=nosetests {posargs: conans.test}
          codecov
 """
@@ -66,7 +66,7 @@ for (x in slaves) {
                 def stdout
                 if(slave == "Linux"){
                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script:"pwd && ls && tox -e ${pyver} -- ${linux_args}")
+                        sh(script:"pwd && ls -la && ls -la conans && tox -e ${pyver} -- ${linux_args}")
                     }
                 }
                 else if(slave == "Windows"){
