@@ -8,7 +8,8 @@ def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000
 def base_tox = """
 [tox]
 envlist = py27,py34,py36
-alwayscopy = True
+skipsdist=True
+# alwayscopy = True
 
 [testenv]
 passenv = *
