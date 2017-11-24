@@ -45,7 +45,7 @@ basepython=/Users/administrator/.pyenv/versions/3.4.7/bin/python
 basepython=/Users/administrator/.pyenv/versions/3.6.3/bin/python
 """
 
-
+def commit
 def builders = [:]
 for (x in slaves) {
     def slave = x
@@ -55,6 +55,7 @@ for (x in slaves) {
           node(slave) {
             stage("${slave} - ${pyver}"){
                 def vars = checkout scm
+				commit = vars["GIT_COMMIT"]
 				println vars
                 if(slave == "Macos"){
                     writeFile(file: "tox.ini", text: base_tox + mac_tox)
@@ -69,11 +70,11 @@ for (x in slaves) {
                 def stdout
                 if(slave == "Linux"){
                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "tox --workdir /tmp/env${pyver} -e ${pyver} -- ${linux_args}")
+                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- ${linux_args}")
                     }
                 }
                 else if(slave == "Windows"){
-                    bat(script: "tox --workdir c:/tmpenv${pyver} -e ${pyver} -- ${win_args}")
+                    bat(script: "tox --workdir c:/tmp/${commit} -e ${pyver} -- ${win_args}")
                 }
                 else if(slave == "Macos"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
@@ -94,7 +95,7 @@ for (y in pyvers) {
     def pyver = y
 	node("Windows"){
 		stage("REST tests Windows ${pyver}"){
-			bat(script:"tox --workdir c:/tmpenv -e ${pyver} -- -x conans.test.remote.rest_api_test")
+			bat(script:"tox --workdir c:/tmp/{commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
 		}
 	}
 }
