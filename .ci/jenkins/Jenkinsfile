@@ -9,7 +9,7 @@ else{
 }
 
 
-def win_args   = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
+def win_args   = "conans.test --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
 def linux_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
 def macos_args = "conans.test --verbosity=1 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
 
@@ -71,16 +71,19 @@ for (x in slaves) {
 						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
 						}
+						sh(script: "rm -rf /tmp/${workdir}")
 					}
 					else if(slave == "Windows"){
 						writeFile(file: "tox.ini", text: base_tox + win_tox)
 						bat(script: "tox --workdir c:/tmp/${workdir} -e ${pyver} -- ${win_args}")
+						bat(script: "rd /s /q \"c:/tmp/${workdir}\"")
 					}
 					else if(slave == "Macos"){
 						writeFile(file: "tox.ini", text: base_tox + mac_tox)
 						withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
 						}
+						sh(script: "rm -rf /tmp/${workdir}")
 					}
 				}
             }
