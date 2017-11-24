@@ -68,7 +68,7 @@ for (x in slaves) {
                 def stdout
                 if(slave == "Linux"){
                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "tox -e ${pyver} -- ${linux_args}")
+                        sh(script: "tox --workdir /tmp/env${pyver} -e ${pyver} -- ${linux_args}")
                     }
                 }
                 else if(slave == "Windows"){
