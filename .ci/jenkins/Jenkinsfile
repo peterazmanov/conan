@@ -66,14 +66,17 @@ for (x in slaves) {
                 if(slave == "Linux"){
                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
                         sh(script:"tox -e ${pyver} -- ${linux_args}")
+						sh(script:"bash <(curl -s https://codecov.io/bash)")
                     }
                 }
                 else if(slave == "Windows"){
                     bat(script:"tox --workdir c:/tmpenv${pyver} -e ${pyver} -- ${win_args}")
+					bat(script:"codecov")
                 }
                 else if(slave == "Macos"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
                         sh(script:"tox -e ${pyver} -- ${macos_args}")
+						sh(script:"bash <(curl -s https://codecov.io/bash)")
                     }
                 }
             }
