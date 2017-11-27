@@ -43,13 +43,13 @@ basepython=C:\\Python36\\python.exe
 
 def mac_tox = """
 [testenv:py27]
-basepython=/Users/administrator/.pyenv/versions/2.7.11/bin/python
+basepython=/Users/jenkins_ci/.pyenv/versions/2.7.11/bin/python
 
 [testenv:py34]
-basepython=/Users/administrator/.pyenv/versions/3.4.7/bin/python
+basepython=/Users/jenkins_ci/.pyenv/versions/3.4.7/bin/python
 
 [testenv:py36]
-basepython=/Users/administrator/.pyenv/versions/3.6.3/bin/python
+basepython=/Users/jenkins_ci/.pyenv/versions/3.6.3/bin/python
 """
 
 def commit
@@ -67,11 +67,13 @@ for (x in slaves) {
 				
 					if(slave == "Linux"){
 						writeFile(file: "tox.ini", text: base_tox)
-						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE} --rm") {
+						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
+							sh(script: "Hello!")
 						}
 					}
 					else if(slave == "Windows"){
+					    workdir = "${commit}\\${pyver}"
 						writeFile(file: "tox.ini", text: base_tox + win_tox("c:\\J\\t\\${workdir}"))
 						bat(script: "tox --workdir c:\\J\\t\\${workdir} -e ${pyver} -- ${win_args}")
 						bat(script: "rd /s /q \"c:\\J\\t\\${workdir}\"")
