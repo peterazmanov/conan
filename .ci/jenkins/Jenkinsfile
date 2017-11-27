@@ -62,7 +62,7 @@ for (x in slaves) {
             node(slave) {
 				stage("${slave} - ${pyver}"){
 					def vars = checkout scm
-					commit = vars["GIT_COMMIT"].substring(0,10)
+					commit = vars["GIT_COMMIT"].substring(0,3)
 					def workdir = "${commit}/${pyver}"
 				
 					if(slave == "Linux"){
@@ -75,8 +75,8 @@ for (x in slaves) {
 					}
 					else if(slave == "Windows"){
 						writeFile(file: "tox.ini", text: base_tox + win_tox("c:/Jenkins/tmp/${workdir}"))
-						bat(script: "tox --workdir c:/Jenkins/tmp/${workdir} -e ${pyver} -- ${win_args}")
-						bat(script: "rd /s /q \"c:/Jenkins/tmp/${workdir}\"")
+						bat(script: "tox --workdir c:/J/t/${workdir} -e ${pyver} -- ${win_args}")
+						bat(script: "rd /s /q \"c:/J/t/${workdir}\"")
 					}
 					else if(slave == "Macos"){
 						writeFile(file: "tox.ini", text: base_tox + mac_tox)
