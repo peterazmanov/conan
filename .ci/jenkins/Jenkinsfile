@@ -29,7 +29,7 @@ commands=nosetests {posargs: conans.test}
 
 def win_tox = {tmpdir -> """
 setenv = CONAN_BASH_PATH = c:/tools/msys64/usr/bin/bash
-         CONAN_USER_HOME_SHORT = ${tmpdir}/.c
+         CONAN_USER_HOME_SHORT = ${tmpdir}\\.c
 
 [testenv:py27]
 basepython=C:\\Python27\\python.exe
@@ -72,9 +72,9 @@ for (x in slaves) {
 						}
 					}
 					else if(slave == "Windows"){
-						writeFile(file: "tox.ini", text: base_tox + win_tox("c:/J/t/${workdir}"))
-						bat(script: "tox --workdir c:/J/t/${workdir} -e ${pyver} -- ${win_args}")
-						bat(script: "rd /s /q \"c:/J/t/${workdir}\"")
+						writeFile(file: "tox.ini", text: base_tox + win_tox("c:\\J\\t\\${workdir}"))
+						bat(script: "tox --workdir c:\\J\\t\\${workdir} -e ${pyver} -- ${win_args}")
+						bat(script: "rd /s /q \"c:\\J\\t\\${workdir}\"")
 					}
 					else if(slave == "Macos"){
 						writeFile(file: "tox.ini", text: base_tox + mac_tox)
@@ -99,7 +99,7 @@ for (y in pyvers) {
     builders["Windows Rest API Test"] = {
         node("Windows"){
             stage("REST tests Windows ${pyver}"){
-                bat(script:"tox --workdir c:/J/t/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
                 bat(script: "rd /s /q \"${WORKSPACE}")
             }
         }
@@ -107,7 +107,7 @@ for (y in pyvers) {
 /*	builders["Linux RESTAPI"] = {
         node("Linux"){
             stage("REST tests Windows ${pyver}"){
-                bat(script:"tox --workdir c:/J/t/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
                 bat(script: "rd /s /q \"${WORKSPACE}")
             }
         }
@@ -115,7 +115,7 @@ for (y in pyvers) {
 	builders["Mac RESTAPI"] = {
         node("Macos"){
             stage("REST tests Windows ${pyver}"){
-                bat(script:"tox --workdir c:/J/t/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
                 bat(script: "rd /s /q \"${WORKSPACE}")
             }
         }
