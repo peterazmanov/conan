@@ -29,7 +29,7 @@ commands=nosetests {posargs: conans.test}
 
 def win_tox = {tmpdir -> """
 setenv = CONAN_BASH_PATH = c:/tools/msys64/usr/bin/bash
-         CONAN_USER_HOME_SHORT = ${tmpdir}\\.c
+
 
 [testenv:py27]
 basepython=C:\\Python27\\python.exe
@@ -83,7 +83,6 @@ for (x in slaves) {
 						withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
 						}
-						sh(script: "rm -rf /tmp/${workdir}")
 					}
 				}
             }
