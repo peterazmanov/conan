@@ -10,7 +10,7 @@ else{
 
 def win_args   = "conans.test.model --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
 def linux_args = "conans.test.model --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
-def macos_args = "conans.test.model --verbosity=2 --processes=4 --process-timeout=1000 --nocapture --nologcapture --with-coverage -a \"!rest_api\""
+def macos_args = "conans.test.model --verbosity=2 --processes=4 --process-timeout=1000 --debug-log=nose.log --nocapture --nologcapture --with-coverage -a \"!rest_api\""
 
 
 def base_tox = """
