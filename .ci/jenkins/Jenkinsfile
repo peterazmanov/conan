@@ -83,7 +83,7 @@ for (x in slaves) {
 					else if(slave == "Macos"){
 						writeFile(file: "tox.ini", text: base_tox + mac_tox)
 						withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
+							sh(script: "tox -e ${pyver} -- ${macos_args}")
 						}
 						sh(script: "rm -rf /tmp/${workdir}")
 					}
