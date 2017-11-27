@@ -29,7 +29,7 @@ commands=nosetests {posargs: conans.test}
 
 def win_tox = {tmpdir -> """
 setenv = CONAN_BASH_PATH = c:\\tools\\msys64\\usr\\bin\\bash
-         CONAN_USER_HOME_SHORT = ${tmpdir}\\.conan
+         CONAN_USER_HOME_SHORT = ${tmpdir}\\.c
 
 [testenv:py27]
 basepython=C:\\Python27\\python.exe
@@ -67,10 +67,9 @@ for (x in slaves) {
 				
 					if(slave == "Linux"){
 						writeFile(file: "tox.ini", text: base_tox)
-						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
+						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE} --rm") {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
 						}
-						sh(script: "rm -rf /tmp/${workdir}")
 					}
 					else if(slave == "Windows"){
 						writeFile(file: "tox.ini", text: base_tox + win_tox("c:/J/t/${workdir}"))
