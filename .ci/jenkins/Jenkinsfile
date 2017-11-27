@@ -103,21 +103,23 @@ for (y in pyvers) {
             }
         }
 	}
-/*	builders["Linux RESTAPI"] = {
+	builders["Linux Rest API Test"] = {
         node("Linux"){
-            stage("REST tests Windows ${pyver}"){
-                bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
-                bat(script: "rd /s /q \"${WORKSPACE}")
+            stage("REST tests Linux ${pyver}"){
+                docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
+                    sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                }
             }
         }
 	}
-	builders["Mac RESTAPI"] = {
+	builders["Mac Rest API Test"] = {
         node("Macos"){
             stage("REST tests Windows ${pyver}"){
-                bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
-                bat(script: "rd /s /q \"${WORKSPACE}")
+                withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
+                    sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                }
             }
         }
-	} */
+	}
 	parallel builders
 }
