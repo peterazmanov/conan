@@ -10,7 +10,7 @@ else{
 
 def win_args   = "conans --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
 def linux_args = "conans --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
-def macos_args = "conans --verbosity=2 --processes=4 --process-timeout=1000 --debug-log=nose.log -a \"!rest_api\""
+def macos_args = "conans.test --verbosity=2 --processes=4  -a \"!rest_api\""
 
 
 def base_tox = """
@@ -18,7 +18,7 @@ def base_tox = """
 envlist = py27,py34,py36
 setenv = CODECOV_TOKEN = "f1a9c517-3d81-4213-9f51-61513111fc28"
 skipsdist=True
-# alwayscopy = True
+alwayscopy = True
 
 [testenv]
 passenv = *
