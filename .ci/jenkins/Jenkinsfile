@@ -8,9 +8,9 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def win_args   = "conans.test_integration --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
-def linux_args = "conans.test_integration --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
-def macos_args = "conans.test_integration --verbosity=2 --with-coverage -a \"!rest_api\""
+def win_args   = "conans.test.model --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
+def linux_args = "conans.test.model --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
+def macos_args = "conans.test.model --verbosity=2 --with-coverage -a \"!rest_api\""
 
 def base_tox = """
 [tox]
@@ -100,7 +100,6 @@ for (y in pyvers) {
         node("Windows"){
             stage("REST tests Windows ${pyver}"){
                 bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
-                bat(script: "rd /s /q \"${WORKSPACE}")
             }
         }
 	}
