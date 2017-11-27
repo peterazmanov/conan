@@ -17,7 +17,7 @@ def base_tox = """
 [tox]
 envlist = py27,py34,py36
 setenv = CODECOV_TOKEN = "f1a9c517-3d81-4213-9f51-61513111fc28"
-# skipsdist=True
+skipsdist=True
 # alwayscopy = True
 
 [testenv]
