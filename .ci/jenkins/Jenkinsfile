@@ -93,6 +93,7 @@ parallel builders
 
 
 // Run rest_api_test without concurrency between same node
+pyvers = ['py36']
 for (y in pyvers) {
     builders = [:]
     def pyver = y
@@ -112,7 +113,7 @@ for (y in pyvers) {
             }
         }
 	}
-	builders["Mac Rest API Test"] = {
+	/*builders["Mac Rest API Test"] = {
         node("Macos"){
             stage("REST tests Windows ${pyver}"){
                 withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
@@ -120,6 +121,6 @@ for (y in pyvers) {
                 }
             }
         }
-	}
+	}*/ // EXTREMELY SLOW, INVESTIGATE
 	parallel builders
 }
