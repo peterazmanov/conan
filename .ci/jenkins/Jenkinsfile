@@ -28,8 +28,8 @@ commands=nosetests {posargs: conans.test}
 """
 
 def win_tox = {tmpdir -> """
-setenv = CONAN_BASH_PATH = c:\\tools\\msys64\\usr\\bin\\bash
-         CONAN_USER_HOME_SHORT = ${tmpdir}\\.c
+setenv = CONAN_BASH_PATH = c:/tools/msys64/usr/bin/bash
+         CONAN_USER_HOME_SHORT = ${tmpdir}/.c
 
 [testenv:py27]
 basepython=C:\\Python27\\python.exe
