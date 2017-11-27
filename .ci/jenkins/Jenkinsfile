@@ -69,7 +69,7 @@ for (x in slaves) {
 						writeFile(file: "tox.ini", text: base_tox)
 						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
-							sh(script: "Hello!")
+							sh(script: "echo 'hello'")
 						}
 					}
 					else if(slave == "Windows"){
