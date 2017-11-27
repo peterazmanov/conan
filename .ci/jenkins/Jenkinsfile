@@ -71,10 +71,9 @@ for (x in slaves) {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
 						}
 						sh(script: "rm -rf /tmp/${workdir}")
-						sh(script: "rm -rf ${WORKSPACE}")
 					}
 					else if(slave == "Windows"){
-						writeFile(file: "tox.ini", text: base_tox + win_tox("c:/Jenkins/tmp/${workdir}"))
+						writeFile(file: "tox.ini", text: base_tox + win_tox("c:/J/t/${workdir}"))
 						bat(script: "tox --workdir c:/J/t/${workdir} -e ${pyver} -- ${win_args}")
 						bat(script: "rd /s /q \"c:/J/t/${workdir}\"")
 					}
@@ -84,7 +83,6 @@ for (x in slaves) {
 							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${macos_args}")
 						}
 						sh(script: "rm -rf /tmp/${workdir}")
-						sh(script: "rm -rf ${WORKSPACE}")
 					}
 				}
             }
@@ -95,13 +93,33 @@ for (x in slaves) {
 parallel builders
 
 
-// Run rest_api_test without concurrency
+// Run rest_api_test without concurrency between same node
 for (y in pyvers) {
+    builders = [:]
     def pyver = y
-	node("Windows"){
-		stage("REST tests Windows ${pyver}"){
-			bat(script:"tox --workdir c:/Jenkins/tmp/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
-			bat(script: "rd /s /q \"${WORKSPACE}")
-		}
+    builders["Windows Rest API Test"] = {
+        node("Windows"){
+            stage("REST tests Windows ${pyver}"){
+                bat(script:"tox --workdir c:/J/t/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script: "rd /s /q \"${WORKSPACE}")
+            }
+        }
 	}
+/*	builders["Linux RESTAPI"] = {
+        node("Linux"){
+            stage("REST tests Windows ${pyver}"){
+                bat(script:"tox --workdir c:/J/t/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script: "rd /s /q \"${WORKSPACE}")
+            }
+        }
+	}
+	builders["Mac RESTAPI"] = {
+        node("Macos"){
+            stage("REST tests Windows ${pyver}"){
+                bat(script:"tox --workdir c:/J/t/${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script: "rd /s /q \"${WORKSPACE}")
+            }
+        }
+	} */
+	parallel builders
 }
