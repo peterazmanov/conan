@@ -84,7 +84,7 @@ for (x in slaves) {
 						writeFile(file: "tox.ini", text: base_tox + mac_tox)
 						withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
 							//sh(script: "tox -e ${pyver} -- ${macos_args}")
-							sh(script: "conans.test --verbosity=20 --processes=4 --process-timeout=1000 --debug-log=nose.log --debug=nose,nose.result -a \"!rest_api\"")
+							sh(script: "nosetests conans.test --verbosity=20 --processes=4 --process-timeout=1000 --debug-log=nose.log --debug=nose,nose.result -a \"!rest_api\"")
 						}
 						sh(script: "rm -rf /tmp/${workdir}")
 					}
