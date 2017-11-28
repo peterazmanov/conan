@@ -22,6 +22,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     exluded_tags = " ".join(["-a \"!%s\"" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
     source_cmd = "source" if platform.system() != "Windows" else ""
+    debug_traces = "--debug=nose.result" if platform.system() != "Darwin" else ""
     # pyenv = "/usr/local/bin/python2"
 
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
@@ -33,16 +34,19 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "conan --version && conan --help && " \
               "nosetests {module_path} --verbosity={verbosity} --processes={num_cores} " \
               "--process-timeout=1000 --with-coverage --nocapture " \
-              "--debug=nose,nose.result " \
-              "{excluded_tags}".format(**{"module_path": module_path,
-                                          "pyenv": pyenv,
-                                          "tmp_folder": tmp_folder,
-                                          "excluded_tags": exluded_tags,
-                                          "venv_dest": venv_dest,
-                                          "num_cores": num_cores,
-                                          "verbosity": verbosity,
-                                          "venv_exe": venv_exe,
-                                          "source_cmd": source_cmd})
+              "{debug_traces} " \
+              "{excluded_tags} " \
+              "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
+                                    **{"module_path": module_path,
+                                       "pyenv": pyenv,
+                                       "tmp_folder": tmp_folder,
+                                       "excluded_tags": exluded_tags,
+                                       "venv_dest": venv_dest,
+                                       "num_cores": num_cores,
+                                       "verbosity": verbosity,
+                                       "venv_exe": venv_exe,
+                                       "source_cmd": source_cmd,
+                                       "debug_traces": debug_traces})
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
