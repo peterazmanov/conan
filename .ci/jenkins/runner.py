@@ -30,9 +30,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "pip install -r conans/requirements_dev.txt && " \
               "pip install -r conans/requirements_server.txt && " \
               "python setup.py install && " \
-              "conan --version && " \
+              "conan --version && conan --help && " \
               "nosetests {module_path} --verbosity={verbosity} --processes={num_cores} " \
-              "--process-timeout=1000 --with-coverage --debug-log=nose.log --nocapture" \
+              "--process-timeout=1000 --with-coverage --debug-log=nose.log --nocapture " \
               "--debug=nose,nose.result " \
               "{excluded_tags}".format(**{"module_path": module_path,
                                           "pyenv": pyenv,
