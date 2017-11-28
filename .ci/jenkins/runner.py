@@ -31,7 +31,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "pip install -r conans/requirements_server.txt && " \
               "python setup.py install && " \
               "nosetests {module_path} --verbosity={verbosity} --processes={num_cores} " \
-              "--process-timeout=1000 --with-coverage --debug-log=nose.log --debug=nose,nose.result" \
+              "--process-timeout=1000 --with-coverage --debug-log=nose.log " \
+              "--debug=nose,nose.result " \
               "{excluded_tags}".format(**{"module_path": module_path,
                                           "pyenv": pyenv,
                                           "tmp_folder": tmp_folder,
@@ -42,8 +43,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                                           "venv_exe": venv_exe,
                                           "source_cmd": source_cmd})
 
+    env = get_environ(tmp_folder)
+    env["PYTHONPATH"] = source_folder
     with chdir(source_folder):
-        with environment_append(get_environ(tmp_folder)):
+        with environment_append(env):
             run(command)
 
 
