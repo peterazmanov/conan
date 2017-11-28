@@ -8,18 +8,18 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-pyvers = ["py27"]
-
 def module = "\"conans \""
 def win_tmp_base = "c:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
 
 def commit
 
-for (y in pyvers) {
-    def builders = [:]
-    for (x in slaves) {
-        def slave = x
+
+def builders = [:]
+
+for (x in slaves) {
+    def slave = x
+    for (y in pyvers) {
         def pyver = y
         builders["${slave} - ${pyver}"] = {
             node(slave) {
@@ -48,8 +48,9 @@ for (y in pyvers) {
             }
         }
     }
-    parallel builders
 }
+parallel builders
+
 
 
 
