@@ -22,9 +22,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
     source_cmd = "source" if platform.system() != "Windows" else ""
     # pyenv = "/usr/local/bin/python2"
 
-    command = "cd {source_folder} && " \
-              "virtualenv --python {pyenv} {venv_dest} && " \
-              "{source_cmd} {venv_exe} && " \
+    command = "cd \"{source_folder}\" && " \
+              "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
+              "{source_cmd} \"{venv_exe}\" && " \
               "pip install -r conans/requirements.txt && " \
               "pip install -r conans/requirements_dev.txt && " \
               "pip install -r conans/requirements_server.txt && " \
@@ -67,5 +67,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude)
-
-
