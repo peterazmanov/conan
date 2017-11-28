@@ -19,7 +19,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     venv_exe = os.path.join(venv_dest,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
-    exluded_tags = " ".join(["-a \"!%s\"" % tag for tag in exluded_tags])
+    exluded_tags = " ".join(["-a '!%s'" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
@@ -34,10 +34,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "pip install -r conans/requirements_server.txt && " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
-              "nosetests {module_path} --verbosity={verbosity} --processes={num_cores} " \
+              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} --processes={num_cores} " \
               "--process-timeout=1000 --with-coverage " \
               "{debug_traces} " \
-              "{excluded_tags} " \
               "--with-xunit " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
@@ -61,6 +60,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
 def run(command):
     print("--CALLING: %s" % command)
+    return
     return os.system(command)
     import subprocess
 
