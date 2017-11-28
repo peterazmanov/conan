@@ -32,7 +32,7 @@ for (x in slaves) {
 					}
 					else if(slave == "Windows"){
 					    workdir = "${commit}\\${pyver}"
-						bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} "${win_tmp_base}${workdir}" -e rest_api")
+						bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api")
 						bat(script: "rd /s /q \"c:\\J\\t\\${workdir}\"")
 					}
 					else if(slave == "Macos"){
@@ -58,7 +58,7 @@ for (y in pyvers) {
     builders["Windows Rest API Test"] = {
         node("Windows"){
             stage("REST tests Windows ${pyver}"){
-                bat(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} "${win_tmp_base}${commit}"")
+                bat(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
                 bat(script: "rd /s /q \"${win_tmp_base}${commit}\"")
             }
         }
