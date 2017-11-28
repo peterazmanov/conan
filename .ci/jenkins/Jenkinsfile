@@ -10,7 +10,7 @@ else{
 
 def module = "conans.test.model"
 def win_tmp_base = "c:\\J\\t\\"
-def runner = "ci/jenkins/runner.py"
+def runner = ".ci/jenkins/runner.py"
 
 def commit
 def builders = [:]
