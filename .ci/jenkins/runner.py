@@ -53,7 +53,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
-    env["CONAN_LOGGING_LEVEL"] = "10"
+    env["CONAN_LOGGING_LEVEL"] = "10" if platform.system() == "Darwin" else "50"
     with chdir(source_folder):
         with environment_append(env):
             run(command)
