@@ -38,6 +38,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "--process-timeout=1000 --with-coverage " \
               "{debug_traces} " \
               "{excluded_tags} " \
+              "--with-xunit " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
                                        "pyenv": pyenv,
