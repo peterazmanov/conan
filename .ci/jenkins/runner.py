@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder,
-              exluded_tags, num_cores=4, verbosity=2):
+              exluded_tags, exclude_dirs, num_cores=4, verbosity=2):
 
     exluded_tags = exluded_tags or []
     venv_dest = os.path.join(tmp_folder, "venv")
@@ -20,13 +20,14 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
     exluded_tags = " ".join(["-a '!%s'" % tag for tag in exluded_tags])
+    exluded_dirs = " ".join(["--exclude-dir '%s'" % tag for tag in exclude_dirs])
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
     debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
 
-     #  --nocapture
+    #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
               "pip install -r conans/requirements.txt && " \
@@ -38,6 +39,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "--process-timeout=1000 --with-coverage " \
               "{debug_traces} " \
               "--with-xunit " \
+              "{exluded_dirs} " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
                                        "pyenv": pyenv,
@@ -48,7 +50,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                                        "verbosity": verbosity,
                                        "venv_exe": venv_exe,
                                        "source_cmd": source_cmd,
-                                       "debug_traces": debug_traces})
+                                       "debug_traces": debug_traces,
+                                       "exluded_dirs": exluded_dirs})
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
@@ -79,8 +82,11 @@ if __name__ == "__main__":
     parser.add_argument('pyver', help='e.j: py27')
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
-    parser.add_argument('--exclude', '-e', nargs=1, action=Extender,
+    parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.j: rest_api')
+    parser.add_argument('--exclude_dir', '-ed', nargs=1, action=Extender,
+                        help='Paths to exclude')
 
     args = parser.parse_args()
-    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude)
+    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag,
+              args.exclude_dir)
