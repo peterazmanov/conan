@@ -8,7 +8,7 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def module = "\"conans.test.remote conans.integrations.conan_env_test\""
+def module = "\"conans.test.remote conans.integration.conan_env_test\""
 def win_tmp_base = "c:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
 
@@ -40,7 +40,7 @@ for (x in slaves) {
                     }
                     else if(slave == "Macos"){
                         withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api -e windows_ci_excluded")
+                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api -e windows_ci_excluded --exclude-dir=conans/integration/remote")
                         }
                         sh(script: "rm -rf /tmp/${workdir}")
                     }
