@@ -31,7 +31,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     # Prevent OSX to lock when no output is received
     debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
-    multiprocess = "--process-timeout=100 --process-restartworker --with-coverage" if platform.system() != "Darwin" or pyver == "py27" else ""
+    multiprocess = ("--processes={num_cores} --process-timeout=100 "
+                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
 
     #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
@@ -41,7 +42,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "pip install -r conans/requirements_server.txt && " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
-              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} --processes={num_cores} " \
+              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} " \
               "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
