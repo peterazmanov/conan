@@ -8,52 +8,9 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def win_args   = "conans --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!windows_ci_excluded,!rest_api\" "
-def linux_args = "conans --verbosity=2 --processes=4 --process-timeout=1000 --with-coverage -a \"!rest_api\""
-def macos_args = "conans.test --verbosity=20 --processes=4 --process-timeout=1000 --debug-log=nose.log --debug=nose,nose.result -a \"!rest_api\""
-
-
-def base_tox = """
-[tox]
-envlist = py27,py34,py36
-setenv = CODECOV_TOKEN = "f1a9c517-3d81-4213-9f51-61513111fc28"
-skipsdist=True
-alwayscopy = True
-
-[testenv]
-passenv = *
-deps = -rconans/requirements.txt
-       -rconans/requirements_dev.txt
-       -rconans/requirements_server.txt
-commands=nosetests {posargs: conans.test}
-         - codecov -t f1a9c517-3d81-4213-9f51-61513111fc28
-"""
-
-def win_tox = {tmpdir -> """
-setenv = CONAN_BASH_PATH = c:/tools/msys64/usr/bin/bash
-
-
-[testenv:py27]
-basepython=C:\\Python27\\python.exe
-
-[testenv:py34]
-basepython=C:\\Python34\\python.exe
-
-[testenv:py36]
-basepython=C:\\Python36\\python.exe
-"""}
-
-def mac_tox = """
-[testenv:py27]
-basepython=/Users/jenkins_ci/.pyenv/versions/2.7.11/bin/python
-
-[testenv:py34]
-basepython=/Users/jenkins_ci/.pyenv/versions/3.4.7/bin/python
-
-[testenv:py36]
-basepython=/Users/jenkins_ci/.pyenv/versions/3.6.3/bin/python
-"""
-
+def module = "conans.test.model"
+def win_tmp_base = "c:\\J\\t\\"
+def runner = "ci/jenkins/runner.py"
 
 def commit
 def builders = [:]
@@ -69,23 +26,19 @@ for (x in slaves) {
 					def workdir = "${commit}/${pyver}"
 				
 					if(slave == "Linux"){
-						writeFile(file: "tox.ini", text: base_tox)
 						docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-							sh(script: "tox --workdir /tmp/${workdir} -e ${pyver} -- ${linux_args}")
+							sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
 						}
 					}
 					else if(slave == "Windows"){
 					    workdir = "${commit}\\${pyver}"
-						writeFile(file: "tox.ini", text: base_tox + win_tox("c:\\J\\t\\${workdir}"))
-						bat(script: "tox --workdir c:\\J\\t\\${workdir} -e ${pyver} -- ${win_args}")
+						bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} "${win_tmp_base}${workdir}" -e rest_api")
 						bat(script: "rd /s /q \"c:\\J\\t\\${workdir}\"")
 					}
 					else if(slave == "Macos"){
-						writeFile(file: "tox.ini", text: base_tox + mac_tox)
 						withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-							//sh(script: "tox -e ${pyver} -- ${macos_args}")
-							sh(script: "virtualenv --python /Users/jenkins_ci/.pyenv/versions/3.4.7/bin/python kk && source kk/bin/activate && pip install -r conans/requirements.txt && pip install -r conans/requirements_dev.txt && pip install -r conans/requirements_server.txt && nosetests conans.test --verbosity=2 --processes=4 --process-timeout=1000 -a \"!rest_api\"")
-						}
+							sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
+					    }
 						sh(script: "rm -rf /tmp/${workdir}")
 					}
 				}
@@ -105,7 +58,8 @@ for (y in pyvers) {
     builders["Windows Rest API Test"] = {
         node("Windows"){
             stage("REST tests Windows ${pyver}"){
-                bat(script:"tox --workdir c:\\J\\t\\${commit}/${pyver} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                bat(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} "${win_tmp_base}${commit}"")
+                bat(script: "rd /s /q \"${win_tmp_base}${commit}\"")
             }
         }
 	}
@@ -113,7 +67,7 @@ for (y in pyvers) {
         node("Linux"){
             stage("REST tests Linux ${pyver}"){
                 docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                    sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                    sh(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
                 }
             }
         }
