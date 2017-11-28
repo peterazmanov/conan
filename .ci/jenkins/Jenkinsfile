@@ -8,7 +8,7 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def module = "\"conans.test_integration conans.test\""
+def module = "\"conans.test.functional.path_limit_test\""
 def win_tmp_base = "c:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
 
@@ -44,6 +44,7 @@ for (x in slaves) {
                         }
                         sh(script: "rm -rf /tmp/${workdir}")
                     }
+                    step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
                 }
             }
         }
