@@ -8,7 +8,7 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def module = "conans.test.command"
+def module = "conans.test"
 def win_tmp_base = "c:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
 
