@@ -22,7 +22,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     exluded_tags = " ".join(["-a \"!%s\"" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
     source_cmd = "source" if platform.system() != "Windows" else ""
-    debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
+    # Prevent OSX to lock when no output is received
+    debug_traces = "--debug=nose.loader,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
 
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
