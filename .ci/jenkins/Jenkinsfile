@@ -44,7 +44,7 @@ for (x in slaves) {
                         }
                         sh(script: "rm -rf /tmp/${workdir}")
                     }
-                    step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
+                    step([$class: 'JUnitResultArchiver', testResults: 'nosetests.xml'])
                 }
             }
         }
