@@ -12,8 +12,8 @@ pylocations = {"Windows": winpylocation,
 def run_tests(module_path, pyver, source_folder, tmp_folder,
               exluded_tags, exclude_dirs, num_cores=4, verbosity=2):
 
-    exluded_tags = exluded_tags or []
-    exclude_dirs = exclude_dirs or []
+    exluded_tags = exluded_tags or ""
+    exclude_dirs = exclude_dirs or ""
     venv_dest = os.path.join(tmp_folder, "venv")
     if not os.path.exists(venv_dest):
         os.makedirs(venv_dest)
