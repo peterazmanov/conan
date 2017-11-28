@@ -20,12 +20,16 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     venv_exe = os.path.join(venv_dest,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
-    exluded_tags = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
-    exluded_dirs = " ".join(["--exclude-dir '%s'" % tag for tag in exclude_dirs])
+    if exluded_tags:
+        exluded_tags = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
+
+    if exclude_dirs:
+        exclude_dirs = " ".join(["--exclude-dir '%s'" % tag for tag in exclude_dirs])
+
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
-    debug_traces = "" #"--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
+    debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
 
     #  --nocapture
@@ -52,7 +56,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                                        "venv_exe": venv_exe,
                                        "source_cmd": source_cmd,
                                        "debug_traces": debug_traces,
-                                       "exluded_dirs": exluded_dirs})
+                                       "exluded_dirs": exclude_dirs})
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
@@ -64,7 +68,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
 def run(command):
     print("--CALLING: %s" % command)
-    return os.system(command)
+    # return os.system(command)
     import subprocess
 
     # ret = subprocess.call("bash -c '%s'" % command, shell=True)
