@@ -17,7 +17,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
     venv_exe = os.path.join(venv_dest,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
-    exluded_tags = " ".join(["-a '!%s'" % tag for tag in exluded_tags])
+    exluded_tags = " ".join(["-a \"!%s\"" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
     source_cmd = "source" if platform.system() != "Windows" else ""
     # pyenv = "/usr/local/bin/python2"
@@ -48,7 +48,8 @@ def run(command):
     import subprocess
     print("--CALLING: %s" % command)
     # ret = subprocess.call("bash -c '%s'" % command, shell=True)
-    ret = subprocess.call(command, shell=True, executable='/bin/bash')
+    shell = '/bin/bash' if platform.system() != "Windows" else None
+    ret = subprocess.call(command, shell=True, executable=shell)
     if ret != 0:
         raise Exception("Error running: '%s'" % command)
 
