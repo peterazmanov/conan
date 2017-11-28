@@ -60,7 +60,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
 def run(command):
     print("--CALLING: %s" % command)
-    return
     return os.system(command)
     import subprocess
 
