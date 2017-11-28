@@ -25,7 +25,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
-    debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
+    debug_traces = "" #"--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
 
     #  --nocapture
