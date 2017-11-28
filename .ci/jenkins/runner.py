@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder,
-              exluded_tags, exclude_dirs, num_cores=4, verbosity=2):
+              exluded_tags, exclude_dirs, num_cores=4, verbosity=1):
 
     exluded_tags = exluded_tags or ""
     exclude_dirs = exclude_dirs or ""
@@ -29,9 +29,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
-    debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
+    debug_traces = "" #"--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
-    multiprocess = ("--processes=%s --process-timeout=100 "
+    multiprocess = ("--processes=%s --process-timeout=1000 "
                     "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
 
     #  --nocapture
@@ -61,7 +61,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
-    env["CONAN_LOGGING_LEVEL"] = "10" if platform.system() == "Darwin" else "50"
+    env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     with chdir(source_folder):
         with environment_append(env):
             run(command)
