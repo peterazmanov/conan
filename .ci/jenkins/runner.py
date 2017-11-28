@@ -58,6 +58,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
 
 def run(command):
+    os.system(command)
+    return
     import subprocess
     print("--CALLING: %s" % command)
     # ret = subprocess.call("bash -c '%s'" % command, shell=True)
