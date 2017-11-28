@@ -31,6 +31,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     # Prevent OSX to lock when no output is received
     debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
+    multiprocess = "--process-timeout=100 --process-restartworker --with-coverage" if platform.system() != "Darwin" or pyver == "py27" else ""
 
     #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
@@ -41,7 +42,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "python setup.py install && " \
               "conan --version && conan --help && " \
               "nosetests {module_path} {excluded_tags} --verbosity={verbosity} --processes={num_cores} " \
-              "--process-timeout=100 --process-restartworker --with-coverage " \
+              "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
               "{exluded_dirs} " \
@@ -56,7 +57,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                                        "venv_exe": venv_exe,
                                        "source_cmd": source_cmd,
                                        "debug_traces": debug_traces,
-                                       "exluded_dirs": exclude_dirs})
+                                       "exluded_dirs": exclude_dirs,
+                                       "multiprocess": multiprocess})
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
