@@ -41,7 +41,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "python setup.py install && " \
               "conan --version && conan --help && " \
               "nosetests {module_path} {excluded_tags} --verbosity={verbosity} --processes={num_cores} " \
-              "--process-timeout=100 --with-coverage " \
+              "--process-timeout=100 --process-restartworker --with-coverage " \
               "{debug_traces} " \
               "--with-xunit " \
               "{exluded_dirs} " \
