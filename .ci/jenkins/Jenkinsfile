@@ -35,12 +35,12 @@ for (x in slaves) {
                     }
                     else if(slave == "Windows"){
                         workdir = "${commit}\\${pyver}"
-                        bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api")
+                        bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api -e windows_ci_excluded")
                         bat(script: "rd /s /q \"c:\\J\\t\\${workdir}\"")
                     }
                     else if(slave == "Macos"){
                         withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
+                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api -e windows_ci_excluded")
                         }
                         sh(script: "rm -rf /tmp/${workdir}")
                     }

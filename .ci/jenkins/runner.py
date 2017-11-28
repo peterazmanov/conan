@@ -60,9 +60,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
 
 def run(command):
+    print("--CALLING: %s" % command)
     return os.system(command)
     import subprocess
-    print("--CALLING: %s" % command)
+
     # ret = subprocess.call("bash -c '%s'" % command, shell=True)
     shell = '/bin/bash' if platform.system() != "Windows" else None
     ret = subprocess.call(command, shell=True, executable=shell)
