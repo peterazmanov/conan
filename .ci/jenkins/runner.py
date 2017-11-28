@@ -12,6 +12,8 @@ pylocations = {"Windows": winpylocation,
 def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_cores=4, verbosity=2):
 
     venv_dest = os.path.join(tmp_folder, "venv")
+    if not os.path.exists(venv_dest):
+        os.mkdir(venv_dest)
     venv_exe = os.path.join(venv_dest, "bin", "activate")
     exluded_tags = " ".join(["-a '!%s'" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
