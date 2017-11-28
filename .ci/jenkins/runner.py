@@ -1,6 +1,6 @@
 import os
 
-from conf import winpylocation, linuxpylocation, macpylocation, Extender
+from conf import winpylocation, linuxpylocation, macpylocation, Extender, environment_append, chdir, get_environ
 import platform
 
 
@@ -9,8 +9,10 @@ pylocations = {"Windows": winpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_cores=4, verbosity=2):
+def run_tests(module_path, pyver, source_folder, tmp_folder,
+              exluded_tags, num_cores=4, verbosity=2):
 
+    exluded_tags = exluded_tags or []
     venv_dest = os.path.join(tmp_folder, "venv")
     if not os.path.exists(venv_dest):
         os.makedirs(venv_dest)
@@ -22,8 +24,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
     source_cmd = "source" if platform.system() != "Windows" else ""
     # pyenv = "/usr/local/bin/python2"
 
-    command = "cd \"{source_folder}\" && " \
-              "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
+    command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
               "pip install -r conans/requirements.txt && " \
               "pip install -r conans/requirements_dev.txt && " \
@@ -32,7 +33,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
               "--process-timeout=1000 " \
               "{excluded_tags}".format(**{"module_path": module_path,
                                           "pyenv": pyenv,
-                                          "source_folder": source_folder,
                                           "tmp_folder": tmp_folder,
                                           "excluded_tags": exluded_tags,
                                           "venv_dest": venv_dest,
@@ -41,7 +41,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
                                           "venv_exe": venv_exe,
                                           "source_cmd": source_cmd})
 
-    run(command)
+    with chdir(source_folder):
+        with environment_append(get_environ(tmp_folder)):
+            run(command)
 
 
 def run(command):

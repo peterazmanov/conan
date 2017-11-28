@@ -1,4 +1,7 @@
 import argparse
+import os
+import platform
+from contextlib import contextmanager
 
 winpylocation = {"py27": "C:\\Python27\\python.exe",
                  "py34": "C:\\Python34\\python.exe",
@@ -13,9 +16,11 @@ linuxpylocation = {"py27": "/usr/bin/python2.7",
                    "py36": "/usr/bin/python3.6"}
 
 
-#def get_
-#win_env = {"CONAN_BASH_PATH": "c:/tools/msys64/usr/bin/bash",
-#           "CONAN_USER_HOME_SHORT": "%s\\.conan}
+def get_environ(tmp_path):
+    if platform.system() == "Windows":
+        return {"CONAN_BASH_PATH": "c:/tools/msys64/usr/bin/bash",
+                "CONAN_USER_HOME_SHORT": "%s\\.conan" % tmp_path}
+    return {}
 
 
 class Extender(argparse.Action):
@@ -41,3 +46,29 @@ class Extender(argparse.Action):
             dest.extend(values)
         except ValueError:
             dest.append(values)
+
+
+@contextmanager
+def environment_append(env_vars):
+    old_env = dict(os.environ)
+    for name, value in env_vars.items():
+        if isinstance(value, list):
+            env_vars[name] = os.pathsep.join(value)
+            if name in old_env:
+                env_vars[name] += os.pathsep + old_env[name]
+    os.environ.update(env_vars)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
