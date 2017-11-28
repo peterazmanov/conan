@@ -20,7 +20,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     venv_exe = os.path.join(venv_dest,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
-    exluded_tags = "-a '%s'" % ",".join(["!%s" % tag for tag in exluded_tags])
+    exluded_tags = "-A '%s'" % " and ".join(["not %s" % tag for tag in exluded_tags])
     exluded_dirs = " ".join(["--exclude-dir '%s'" % tag for tag in exclude_dirs])
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
