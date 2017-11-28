@@ -12,13 +12,14 @@ pylocations = {"Windows": winpylocation,
 def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_cores=4, verbosity=2):
 
     venv_dest = os.path.join(tmp_folder, "venv")
+    venv_exe = os.path.join(venv_dest, "bin", "activate")
     exluded_tags = " ".join(["-a '!%s'" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
     # pyenv = "/usr/local/bin/python2"
 
     command = "cd {source_folder} && " \
               "virtualenv --python {pyenv} {venv_dest} && " \
-              "source {venv_dest}/bin/activate && " \
+              "source {venv_exe} && " \
               "pip install -r conans/requirements.txt && " \
               "pip install -r conans/requirements_dev.txt && " \
               "pip install -r conans/requirements_server.txt && " \
@@ -31,7 +32,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
                                           "excluded_tags": exluded_tags,
                                           "venv_dest": venv_dest,
                                           "num_cores": num_cores,
-                                          "verbosity": verbosity})
+                                          "verbosity": verbosity,
+                                          "venv_exe": venv_exe})
 
     run(command)
 
