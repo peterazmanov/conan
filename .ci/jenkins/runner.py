@@ -14,7 +14,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, exluded_tags, num_c
     venv_dest = os.path.join(tmp_folder, "venv")
     exluded_tags = " ".join(["-a '!%s'" % tag for tag in exluded_tags])
     pyenv = pylocations[pyver]
-    pyenv = "/usr/local/bin/python2"
+    # pyenv = "/usr/local/bin/python2"
 
     command = "cd {source_folder} && " \
               "virtualenv --python {pyenv} {venv_dest} && " \
