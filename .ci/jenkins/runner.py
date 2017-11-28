@@ -23,9 +23,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     pyenv = pylocations[pyver]
     source_cmd = "source" if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
-    debug_traces = "--debug=nose.loader,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
+    debug_traces = "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
 
+     #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
               "pip install -r conans/requirements.txt && " \
@@ -34,7 +35,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "python setup.py install && " \
               "conan --version && conan --help && " \
               "nosetests {module_path} --verbosity={verbosity} --processes={num_cores} " \
-              "--process-timeout=1000 --with-coverage --nocapture " \
+              "--process-timeout=1000 --with-coverage " \
               "{debug_traces} " \
               "{excluded_tags} " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
