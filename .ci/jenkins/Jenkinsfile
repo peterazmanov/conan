@@ -40,7 +40,7 @@ for (x in slaves) {
                     }
                     else if(slave == "Macos"){
                         withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api -e windows_ci_excluded -ed=conans/integration/remote")
+                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api -e windows_ci_excluded -ed=conans/test/remote")
                         }
                         sh(script: "rm -rf /tmp/${workdir}")
                     }
