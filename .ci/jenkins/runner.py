@@ -10,11 +10,10 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder,
-              exluded_tags, exclude_dirs, num_cores=3, verbosity=None):
+              exluded_tags, num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     exluded_tags = exluded_tags or ""
-    exclude_dirs = exclude_dirs or ""
     venv_dest = os.path.join(tmp_folder, "venv")
     if not os.path.exists(venv_dest):
         os.makedirs(venv_dest)
@@ -24,13 +23,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     if exluded_tags:
         exluded_tags = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
 
-    if exclude_dirs:
-        exclude_dirs = " ".join(["--exclude-dir '%s'" % tag for tag in exclude_dirs])
-
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
-    debug_traces = "" #"--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
+    debug_traces = ""  # "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
     multiprocess = ("--processes=%s --process-timeout=1000 "
                     "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
@@ -50,7 +46,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
               "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
-              "{exluded_dirs} " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
                                        "pyenv": pyenv,
@@ -60,7 +55,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                                        "venv_exe": venv_exe,
                                        "source_cmd": source_cmd,
                                        "debug_traces": debug_traces,
-                                       "exluded_dirs": exclude_dirs,
                                        "multiprocess": multiprocess})
 
     env = get_environ(tmp_folder)
@@ -94,9 +88,6 @@ if __name__ == "__main__":
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.j: rest_api')
-    parser.add_argument('--exclude_dir', '-ed', nargs=1, action=Extender,
-                        help='Paths to exclude')
 
     args = parser.parse_args()
-    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag,
-              args.exclude_dir)
+    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag)

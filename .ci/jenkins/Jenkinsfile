@@ -25,7 +25,7 @@ for (x in slaves) {
             node(slave) {
                 stage("${slave} - ${pyver}"){
                     def vars = checkout scm
-                    commit = vars["GIT_COMMIT"].substring(0,3)
+                    commit = vars["GIT_COMMIT"].substring(0, 4)
                     def workdir = "${commit}/${pyver}"
 
                     if(slave == "Linux"){
@@ -47,7 +47,7 @@ for (x in slaves) {
                     else if(slave == "Macos"){
                         try{
                           withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                              sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api -e windows_ci_excluded -ed=conans/test/remote")
+                              sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
                           }
                         }
                         finally{
