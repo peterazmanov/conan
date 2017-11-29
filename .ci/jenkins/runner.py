@@ -37,6 +37,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
     if num_cores <= 1:
         multiprocess = ""
+
     #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
