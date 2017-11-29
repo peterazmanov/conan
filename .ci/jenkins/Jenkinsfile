@@ -36,7 +36,7 @@ for (x in slaves) {
                     else if(slave == "Windows"){
                         try{
                           workdir = "${commit}\\${pyver}"
-                          withEnv(['CONAN_TEST_FOLDER="${win_tmp_base}${workdir}"']){
+                          withEnv(["CONAN_TEST_FOLDER=${win_tmp_base}${workdir}"]){
                             bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api -e windows_ci_excluded")
                           }
                         }
