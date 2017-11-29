@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder,
-              exluded_tags, exclude_dirs, num_cores=4, verbosity=None):
+              exluded_tags, exclude_dirs, num_cores=1, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     exluded_tags = exluded_tags or ""
@@ -35,6 +35,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     multiprocess = ("--processes=%s --process-timeout=1000 "
                     "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
 
+    if num_cores <= 1:
+        multiprocess = ""
     #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
