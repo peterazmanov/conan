@@ -9,7 +9,7 @@ else{
 }
 
 def module = "\"conans.test_integration conans.test\""
-def win_tmp_base = "c:\\J\\t\\"
+def win_tmp_base = "D:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
 
 def commit
@@ -29,7 +29,7 @@ for (x in slaves) {
                     def workdir = "${commit}/${pyver}"
 
                     if(slave == "Linux"){
-                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE} --rm") {
+                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
                             sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
                         }
                     }
@@ -41,7 +41,7 @@ for (x in slaves) {
                           }
                         }
                         finally{
-                          bat(script: "rd /s /q \"c:\\J\\t\\${workdir}\"")
+                          bat(script: "rd /s /q \"${win_tmp_base}${workdir}\"")
                         }
                     }
                     else if(slave == "Macos"){

@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder,
-              exluded_tags, exclude_dirs, num_cores=1, verbosity=None):
+              exluded_tags, exclude_dirs, num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     exluded_tags = exluded_tags or ""
