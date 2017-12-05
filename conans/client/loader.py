@@ -12,13 +12,17 @@ from conans.util.files import load
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, profile):
+    def __init__(self, runner, settings, profile, local=False):
         """
         @param settings: Settings object, to assign to ConanFile at load time
-        @param options: OptionsValues, necessary so the base conanfile loads the options
-                        to start propagation, and having them in order to call build()
-        @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
-        @param cached_env_values: EnvValues object
+        @param local: When local=True it means that the state is being recovered from installed files
+        conaninfo.txt, conanbuildinfo.txt, and only local methods as build() are being executed.
+        Thus, it is necessary to:
+            - Restore settings from that info, as configure() is not called, being necessary to
+              remove those settings that doesn't have a value
+
+            - As config_options() is not called, could be options added dynamically, now we have the
+            value but not the "option", we need to trust the conaninfo.txt and add it.
         """
         self._runner = runner
 
@@ -30,6 +34,9 @@ class ConanFileLoader(object):
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
         self.dev_reference = None
+        self.local = local
+        if local:
+            settings.remove_undefined()
 
     def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
@@ -60,6 +67,13 @@ class ConanFileLoader(object):
 
             if consumer:
                 self._user_options.descope_options(result.name)
+                if self.local:
+                    # Add the values (from conaninfo), trust the structure from values
+                    for opt_name, value in self._user_options.as_list():
+                        if opt_name not in result.options:
+                            result.options.add_option(opt_name, [value], value)
+                else:
+                    result.config_options()
                 result.options.initialize_upstream(self._user_options)
                 self._user_options.clear_unscoped_options()
             else:

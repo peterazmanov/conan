@@ -249,13 +249,13 @@ target_link_libraries(mylib ${CONAN_LIBS})
 """})
 
         if platform.system() != "Windows":
-            client.run("install . --install-folder=build -o Mylib:cppstd=98gnu")
+            client.run("install . --install-folder=build -o MyLib:cppstd=98gnu")
             error = client.run("build . --build-folder=build", ignore_error=True)
             self.assertTrue(error)
             self.assertIn("Error in build()", client.out)
 
         # Now specify c++14
-        client.run("install . --install-folder=build -o cppstd=14")
+        client.run("install . --install-folder=build -o MyLib:cppstd=14")
         client.run("build . --build-folder=build")
         self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
         libname = "libmylib.a"

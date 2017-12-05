@@ -149,7 +149,8 @@ class ConanFile(object):
         # so the creator should do:
         #  default = 11 if self.settings.compiler != "Visual Studio" else None
         stds.insert(0, None)
-        self.options.add_option("cppstd", stds, default)
+        previous_value = self.options.cppstd if "cppstd" in self.options else None
+        self.options.add_option("cppstd", stds, previous_value or default)
 
     def add_cstd(self, default=None):
         stds = available_cstd_versions(self.settings.get_safe("compiler"),

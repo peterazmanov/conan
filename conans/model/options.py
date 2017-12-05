@@ -468,6 +468,9 @@ class Options(object):
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
 
+    def add_option(self, name, values, default):
+        return self._package_options.add_option(name, values, default)
+
     @property
     def deps_package_values(self):
         return self._deps_package_values
@@ -533,6 +536,9 @@ class Options(object):
 
     def initialize_upstream(self, user_values):
         """ used to propagate from downstream the options to the upper requirements
+        If local, we are reading the user_values from the conaninfo.txt, so the option is dynamically
+        added in config_options, self._package_options won't have the option. So we trust the origin
+        and just add the missing options.
         """
         if user_values is not None:
             assert isinstance(user_values, OptionsValues)
