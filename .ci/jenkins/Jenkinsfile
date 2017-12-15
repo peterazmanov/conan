@@ -14,7 +14,7 @@ def modules = ["conans.test_integration", "conans.test"]
 def numcores = "--num_cores=3"
 
 if(nightly){
-    modules.add(0, "conans.test_regression")
+    modules = ["conans.test_regression", *modules]
     numcores = "--num_cores=1"
 }
 
