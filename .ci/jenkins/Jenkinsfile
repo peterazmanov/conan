@@ -10,14 +10,15 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def module = "\"conans.test_integration conans.test\""
+def modules = ["conans.test_integration", "conans.test"]
 def numcores = "--num_cores=3"
 
 if(nightly){
-    module =  "\"conans.test_regression\""
+    modules.add(0, "conans.test_regression")
     numcores = "--num_cores=1"
 }
 
+module = "\"" + module.join(" ") + "\""
 
 def win_tmp_base = "D:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
