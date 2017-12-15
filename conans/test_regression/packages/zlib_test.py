@@ -4,7 +4,7 @@ from conans.test_regression.utils.base_exe import BaseExeTest, run
 class ZlibTest(BaseExeTest):
 
     libref = "zlib/1.2.11@conan/stable"
-    librepo = "git@github.com:lasote/conan-zlib.git"
+    librepo = "https://github.com/lasote/conan-zlib.git"
     branch = "release/1.2.11"
 
     def setUp(self):
