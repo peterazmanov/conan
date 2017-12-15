@@ -18,7 +18,7 @@ if(nightly){
     numcores = "--num_cores=1"
 }
 
-module = "\"" + module.join(" ") + "\""
+module = "\"" + modules.join(" ") + "\""
 
 def win_tmp_base = "D:\\J\\t\\"
 def runner = ".ci/jenkins/runner.py"
