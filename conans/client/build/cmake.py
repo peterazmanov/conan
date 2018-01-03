@@ -252,6 +252,9 @@ class CMake(object):
         ret.update(self._cmake_compiler_options(the_os=self._os,  arch=self._arch))
         ret.update(self._cmake_cross_build_defines(the_os=self._os, os_ver=self._op_system_version))
 
+        if os.getenv("CONAN_MAKE_PROGRAM"):
+            ret["CMAKE_MAKE_PROGRAM"] = os.environ["CONAN_MAKE_PROGRAM"]
+
         ret["CONAN_EXPORTED"] = "1"
         if self._compiler:
             ret["CONAN_COMPILER"] = self._compiler
