@@ -432,6 +432,9 @@ class Command(object):
                             "information retrieved from the conaninfo.txt and conanbuildinfo.txt, "
                             "only required when using conditional source() based on settings, "
                             "options, env_info and user_info ")
+        parser.add_argument("-e", "--with-exports",  default=False, action='store_true',
+                            help='export also the specified files in the conanfile to the '
+                                 'source-folder destination folder')
         args = parser.parse_args(*args)
 
         try:
@@ -446,7 +449,8 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.source(args.path, args.source_folder, args.install_folder)
+        return self._conan.source(args.path, args.source_folder, args.install_folder,
+                                  with_exports=args.with_exports)
 
     def build(self, *args):
         """ Calls your local conanfile.py 'build()' method.

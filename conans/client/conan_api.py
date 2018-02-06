@@ -513,7 +513,7 @@ class ConanAPIV1(object):
                                     install_folder)
 
     @api_method
-    def source(self, path, source_folder=None, info_folder=None, cwd=None):
+    def source(self, path, source_folder=None, info_folder=None, cwd=None, with_exports=False):
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
@@ -523,7 +523,7 @@ class ConanAPIV1(object):
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
-        self._manager.source(conanfile_path, source_folder, info_folder)
+        self._manager.source(conanfile_path, source_folder, info_folder, with_exports)
 
     @api_method
     def imports(self, path, dest=None, info_folder=None, cwd=None):

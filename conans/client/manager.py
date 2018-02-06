@@ -393,18 +393,24 @@ class ConanManager(object):
         if manifest_manager:
             manifest_manager.print_log()
 
-    def source(self, conanfile_path, source_folder, info_folder):
+    def source(self, conanfile_path, source_folder, info_folder, with_exports):
         """
         :param conanfile_path: Absolute path to a conanfile
         :param source_folder: Absolute path where to put the files
         :param info_folder: Absolute path where to read the info files
         :param package_folder: Absolute path to the package_folder, only to have the var present
+        :param with_exports: Copy also the specified files in the conanfile exports and exports_sources
         :return:
         """
         output = ScopedOutput("PROJECT", self._user_io.out)
         # only infos if exist
         conanfile = self._load_consumer_conanfile(conanfile_path, info_folder, output)
         config_source_local(source_folder, conanfile, output)
+        if with_exports:
+            # FIXME: private import
+            from conans.client.cmd.export import _execute_export
+            _execute_export(conanfile_path, conanfile, source_folder,
+                            source_folder, output)
 
     def imports_undo(self, current_path):
         undo_imports(current_path, self._user_io.out)
