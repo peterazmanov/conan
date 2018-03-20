@@ -1,3 +1,5 @@
+from conans.test.utils.tools import TestBufferConanOutput
+
 
 class MockSettings(object):
 
@@ -6,6 +8,9 @@ class MockSettings(object):
 
     def get_safe(self, value):
         return self.values.get(value, None)
+
+
+MockOptions = MockSettings
 
 
 class MockDepsCppInfo(object):
@@ -24,15 +29,22 @@ class MockDepsCppInfo(object):
 
 class MockConanfile(object):
 
-    def __init__(self, settings, runner=None):
+    def __init__(self, settings, options=None, runner=None):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
+        self.options = options or MockOptions({})
         self.generators = []
+        self.output = TestBufferConanOutput()
 
-    def run(self, *args):
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
+
+    def run(self, *args, **kwargs):
         if self.runner:
-            self.runner(*args, output=None)
+            kwargs["output"] = None
+            self.runner(*args, **kwargs)
 
 
 class TestConanFile(object):

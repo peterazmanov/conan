@@ -12,8 +12,9 @@ from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.client.require_resolver import RequireResolver, satisfying
 import re
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from conans.model.profile import Profile
+from conans.errors import ConanException
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -109,7 +110,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
-    def search(self, pattern):
+    def search_recipes(self, pattern):
         from fnmatch import translate
         pattern = translate(pattern)
         pattern = re.compile(pattern)
@@ -170,7 +171,7 @@ class VersionRangesTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
-        self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
+        self.resolver = RequireResolver(self.output, self.retriever, self.remote_search, update=False)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
@@ -247,6 +248,10 @@ class ChatConan(ConanFile):
     version = "2.3"
     requires = "Hello/1.2@memsharded/testing", %s
 """
+        if valid is False:
+            with self.assertRaisesRegexp(ConanException, "not valid"):
+                self.root(chat_content % version_range)
+            return
 
         deps_graph = self.root(chat_content % version_range)
         hello = _get_nodes(deps_graph, "Hello")[0]

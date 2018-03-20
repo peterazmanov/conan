@@ -10,6 +10,7 @@ from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
 from conans import tools
 from conans.client.conf import ConanClientConfigParser
+from conans.client.conf.config_installer import _hide_password
 import shutil
 
 
@@ -56,12 +57,20 @@ https = None
 # https = http://10.10.1.10:1080
 """
 
+myfuncpy = """def mycooladd(a, b):
+    return a + b
+"""
+
 
 def zipdir(path, zipfilename):
     with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
         for root, _, files in os.walk(path):
             for f in files:
-                z.write(os.path.join(root, f))
+                file_path = os.path.join(root, f)
+                if file_path == zipfilename:
+                    continue
+                relpath = os.path.relpath(file_path, path)
+                z.write(file_path, relpath)
 
 
 class ConfigInstallTest(unittest.TestCase):
@@ -79,6 +88,12 @@ Other/1.2@user/channel conan-center
         save(os.path.join(self.client.client_cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
 
+        self.old_env = dict(os.environ)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.old_env)
+
     def _create_profile_folder(self, folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
         save_files(folder, {"settings.yml": settings_yml,
@@ -86,7 +101,9 @@ Other/1.2@user/channel conan-center
                             "profiles/linux": linux_profile,
                             "profiles/windows": win_profile,
                             "config/conan.conf": conan_conf,
-                            "pylintrc": "#Custom pylint"})
+                            "pylintrc": "#Custom pylint",
+                            "python/myfuncs.py": myfuncpy,
+                            "python/__init__.py": ""})
         return folder
 
     def _create_zip(self, zippath=None):
@@ -124,6 +141,24 @@ Other/1.2@user/channel conan-center
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
                          load(os.path.join(self.client.client_cache.conan_folder, "pylintrc")))
+        self.assertEqual("",
+                         load(os.path.join(self.client.client_cache.conan_folder, "python",
+                                           "__init__.py")))
+
+    def reuse_python_test(self):
+        zippath = self._create_zip()
+        self.client.run('config install "%s"' % zippath)
+        conanfile = """from conans import ConanFile
+from myfuncs import mycooladd
+a = mycooladd(1, 2)
+assert a == 3
+class Pkg(ConanFile):
+    def build(self):
+        self.output.info("A is %s" % a)
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("A is 3", self.client.out)
 
     def install_file_test(self):
         """ should install from a file in current dir
@@ -186,3 +221,71 @@ Other/1.2@user/channel conan-center
         error = self.client.run("config install", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Called config install without arguments", self.client.out)
+
+    def removed_credentials_from_url_unit_test(self):
+        """
+        Unit tests to remove credentials in netloc from url when using basic auth
+        # https://github.com/conan-io/conan/issues/2324
+        """
+        url_without_credentials = r"https://server.com/resource.zip"
+        url_with_credentials = r"https://test_username:test_password_123@server.com/resource.zip"
+        url_hidden_password = r"https://test_username:<hidden>@server.com/resource.zip"
+
+        # Check url is the same when not using credentials
+        self.assertEqual(_hide_password(url_without_credentials), url_without_credentials)
+
+        # Check password is hidden using url with credentials
+        self.assertEqual(_hide_password(url_with_credentials), url_hidden_password)
+
+        # Check that it works with other protocols ftp
+        ftp_with_credentials = r"ftp://test_username_ftp:test_password_321@server.com/resurce.zip"
+        ftp_hidden_password = r"ftp://test_username_ftp:<hidden>@server.com/resurce.zip"
+        self.assertEqual(_hide_password(ftp_with_credentials), ftp_hidden_password)
+
+        # Check function also works for file paths *unix/windows
+        unix_file_path = r"/tmp/test"
+        self.assertEqual(_hide_password(unix_file_path), unix_file_path)
+        windows_file_path = r"c:\windows\test"
+        self.assertEqual(_hide_password(windows_file_path), windows_file_path)
+
+        # Check works with empty string
+        self.assertEqual(_hide_password(''), '')
+
+    def remove_credentials_config_installer_test(self):
+        """ Functional test to check credentials are not displayed in output but are still present
+        in conan configuration
+        # https://github.com/conan-io/conan/issues/2324
+        """
+        fake_url_with_credentials = "http://test_user:test_password@myfakeurl.com/myconf.zip"
+        fake_url_hidden_password = "http://test_user:<hidden>@myfakeurl.com/myconf.zip"
+
+        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
+            self.assertEqual(url, fake_url_with_credentials)
+            self._create_zip(filename)
+
+        with patch.object(Downloader, 'download', new=my_download):
+            self.client.run("config install %s" % (fake_url_with_credentials,))
+
+            # Check credentials are not displayed in output
+            self.assertNotIn(fake_url_with_credentials, self.client.out)
+            self.assertIn(fake_url_hidden_password, self.client.out)
+
+            # Check credentials still stored in configuration
+            self._check(fake_url_with_credentials)
+
+    def ssl_verify_test(self):
+        fake_url = "https://fakeurl.com/myconf.zip"
+
+        def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
+            self.assertFalse(obj.verify)
+            self._create_zip(filename)
+
+        def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
+            self.assertTrue(obj.verify)
+            self._create_zip(filename)
+
+        with patch.object(Downloader, 'download', new=download_verify_false):
+            self.client.run("config install %s --verify-ssl=False" % fake_url)
+
+        with patch.object(Downloader, 'download', new=download_verify_true):
+            self.client.run("config install %s --verify-ssl=True" % fake_url)
