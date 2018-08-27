@@ -34,6 +34,11 @@ BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
+
+CONAN_BUILD_CMAKE = 'conan_build.cmake'
+CONAN_BUILD_CMAKE_RUN = 'conan_build_run.cmake'
+CONAN_DEPS_CMAKE = 'conan_deps.cmake'
+
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"

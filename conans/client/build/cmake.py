@@ -175,6 +175,8 @@ class CMake(object):
                       and "PKG_CONFIG_PATH" not in os.environ
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
+        self.write_build_file(self.build_dir)
+
         with tools.environment_append(pkg_env):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
@@ -182,6 +184,10 @@ class CMake(object):
                     self._conanfile.run(command)
             else:
                 self._conanfile.run(command)
+
+    def write_build_file(self, build_dir):
+        """Classic build helper pass everything by -D"""
+        pass
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:

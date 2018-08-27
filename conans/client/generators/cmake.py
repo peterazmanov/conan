@@ -1,8 +1,11 @@
+from conans.client.generators.cmake_common_build import cmake_build_macros, cmake_build_template
 from conans.model import Generator
-from conans.paths import BUILD_INFO_CMAKE
-from conans.client.generators.cmake_common import cmake_dependency_vars,\
-    cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info,\
-    cmake_global_vars, cmake_user_info_vars, cmake_settings_info
+from conans.paths import BUILD_INFO_CMAKE, CONAN_BUILD_CMAKE, CONAN_DEPS_CMAKE, \
+    CONAN_BUILD_CMAKE_RUN
+from conans.client.generators.cmake_common import cmake_dependency_vars, \
+    cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info, \
+    cmake_global_vars, cmake_user_info_vars, cmake_settings_info, cmake_basic_setup, \
+    cmake_basic_setup_deps
 
 
 class DepsCppCmake(object):
@@ -50,12 +53,53 @@ class DepsCppCmake(object):
 
 
 class CMakeGenerator(Generator):
+
     @property
     def filename(self):
-        return BUILD_INFO_CMAKE
+        pass
 
     @property
     def content(self):
+        return {BUILD_INFO_CMAKE: self._content_conanbuildinfo(),
+                CONAN_BUILD_CMAKE: self._content_conanbuild(),
+                CONAN_DEPS_CMAKE: self._content_conan_deps(),
+                CONAN_BUILD_CMAKE_RUN: "load_all()"}
+
+    def _content_conanbuild(self):
+        """
+        :return: Contents for build setup (without deps info)
+        """
+        from conans import CMakeRev2
+        return CMakeRev2(self.conanfile).build_file_contents()
+
+    def _content_conanbuildinfo(self):
+        """
+        :return: The classic containing both deps info and build and basic setup
+        """
+        sections = ['message(STATUS "Setup with classic CMake generator")']
+        sections.extend(self._sections_depsinfo())
+
+        # MACROS
+        sections.append(cmake_basic_setup)
+        sections.append(cmake_macros)
+        sections.append(cmake_build_macros)
+
+        return "\n".join(sections)
+
+    def _content_conan_deps(self):
+        """
+        :return: Only the deps info and setup
+        """
+        sections = ['message(STATUS "> Setup requirements information...")']
+        sections.extend(self._sections_depsinfo())
+
+        # MACROS
+        sections.append(cmake_basic_setup_deps)
+        sections.append(cmake_macros)
+
+        return "\n".join(sections)
+
+    def _sections_depsinfo(self):
         sections = ["include(CMakeParseArguments)"]
 
         # Per requirement variables
@@ -88,11 +132,8 @@ class CMakeGenerator(Generator):
         # TARGETS
         sections.extend(generate_targets_section(self.deps_build_info.dependencies))
 
-        # MACROS
-        sections.append(cmake_macros)
-
         # USER DECLARED VARS
         sections.append("\n### Definition of user declared vars (user_info) ###\n")
         sections.append(cmake_user_info_vars(self.conanfile.deps_user_info))
 
-        return "\n".join(sections)
+        return sections
