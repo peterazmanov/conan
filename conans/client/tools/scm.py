@@ -17,7 +17,7 @@ class Git(object):
                  runner=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
-            os.mkdir(self.folder)
+            os.makedirs(self.folder)
         self._verify_ssl = verify_ssl
         self._force_eng = force_english
         self._username = username
@@ -130,8 +130,10 @@ class Git(object):
     get_revision = get_commit
 
     def _check_git_repo(self):
-        if not os.path.exists(os.path.join(self.folder, ".git")):
-            raise ConanException("Not a git repository")
+        try:
+            self.run("status")
+        except Exception:
+            raise ConanException("Not a valid git repository")
 
     def get_branch(self):
         self._check_git_repo()
