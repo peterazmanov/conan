@@ -50,7 +50,3 @@ jobs:
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 
-
-
-!!! SOURCES ESTAN CLONADOS EN home/vsts/work/1/s/.git/ BUSCAR VARIABLE
-!!! NO TIENE PERMISO PARA /home/conan/venv, ¿que usuario es?
