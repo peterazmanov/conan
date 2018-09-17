@@ -3,6 +3,7 @@ import platform
 import re
 from subprocess import Popen, PIPE, STDOUT
 
+from conans.client.output import Color
 from conans.model.version import Version
 from conans.tools import vs_installation_path
 
@@ -23,18 +24,29 @@ def _execute(command):
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
+
     try:
-        _, out = _execute('%s -dumpversion' % compiler_exe)
+        if platform.system() == "Darwin":
+            # In Mac OS X check if gcc is a fronted using apple-clang
+            _, out = _execute("%s --version" % compiler_exe)
+            out = out.lower()
+            if "clang" in out:
+                return None
+
+        ret, out = _execute('%s -dumpversion' % compiler_exe)
+        if ret != 0:
+            return None
         compiler = "gcc"
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
-        if len(installed_version) == 1:
-            _, out = _execute('%s -dumpfullversion' % compiler_exe)
-            installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
+            major = installed_version.split(".")[0]
+            if int(major) >= 5:
+                output.info("gcc>=5, using the major as version")
+                installed_version = major
             return compiler, installed_version
     except:
         return None
@@ -42,12 +54,14 @@ def _gcc_compiler(output, compiler_exe="gcc"):
 
 def _clang_compiler(output, compiler_exe="clang"):
     try:
-        _, out = _execute('%s --version' % compiler_exe)
+        ret, out = _execute('%s --version' % compiler_exe)
+        if ret != 0:
+            return None
         if "Apple" in out:
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        installed_version = re.search("([0-9]\.[0-9])", out).group()
+        installed_version = re.search("([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
@@ -145,7 +159,12 @@ def _get_default_compiler(output):
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
         if "gcc" in command:
-            return _gcc_compiler(output, command)
+            gcc = _gcc_compiler(output, command)
+            if platform.system() == "Darwin" and gcc is None:
+                output.error(
+                    "%s detected as a frontend using apple-clang. Compiler not supported" % command
+                )
+            return gcc
         if "clang" in command.lower():
             return _clang_compiler(output, command)
         if platform.system() == "SunOS" and command.lower() == "cc":
@@ -185,6 +204,23 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
+            if Version(version) >= Version("5.1"):
+
+                msg = """
+Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
+'libstdc++' for backwards compatibility.
+Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
+
+If you want Conan to use the new ABI, edit the default profile at:
+
+    ~/.conan/profiles/default
+
+adjusting 'compiler.libcxx=libstdc++11'
+"""
+                output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
+                               "***********************\n %s\n************************************"
+                               "************************************************\n\n\n" % msg,
+                               Color.BRIGHT_RED)
         elif compiler == "cc":
             if platform.system() == "SunOS":
                 result.append(("compiler.libstdcxx", "libstdcxx4"))
@@ -203,6 +239,10 @@ def detected_os():
         return "Macos"
     if result.startswith("CYGWIN"):
         return "Windows"
+    if result.startswith("MINGW32_NT") or result.startswith("MINGW64_NT"):
+        return "Windows"
+    if result.startswith("MSYS_NT"):
+        return "Windows"
     return result
 
 
@@ -213,8 +253,9 @@ def _detect_os_arch(result, output):
                      'amd64': 'x86_64',
                      'aarch64': 'armv8',
                      'sun4v': 'sparc'}
-
-    result.append(("os", detected_os()))
+    the_os = detected_os()
+    result.append(("os", the_os))
+    result.append(("os_build", the_os))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())
     if arch.startswith('arm'):
         for a in ("armv6", "armv7hf", "armv7", "armv8"):
@@ -225,6 +266,7 @@ def _detect_os_arch(result, output):
             output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                          "Please check your conan.conf and settings.yml files" % arch)
     result.append(("arch", arch))
+    result.append(("arch_build", arch))
 
 
 def detect_defaults_settings(output):

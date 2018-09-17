@@ -1,9 +1,12 @@
+import os
+
+from conans.client.build.cppstd_flags import cppstd_default
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
-from conans.model.scope import Scopes
 from conans.model.values import Values
+from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
@@ -41,14 +44,6 @@ class RequirementInfo(object):
     def sha(self):
         return "/".join([str(n) for n in [self.name, self.version, self.user, self.channel,
                                           self.package_id]])
-
-    def serialize(self):
-        return str(self.package)
-
-    @staticmethod
-    def deserialize(data):
-        ret = RequirementInfo(data)
-        return ret
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
@@ -161,17 +156,6 @@ class RequirementsInfo(object):
                 result.append(dumped)
         return "\n".join(result)
 
-    def serialize(self):
-        return {str(ref): requinfo.serialize() for ref, requinfo in self._data.items()}
-
-    @staticmethod
-    def deserialize(data):
-        ret = RequirementsInfo({}, None)
-        for ref, requinfo in data.items():
-            ref = PackageReference.loads(ref)
-            ret._data[ref] = RequirementInfo.deserialize(requinfo)
-        return ret
-
     def unrelated_mode(self):
         self.clear()
 
@@ -245,12 +229,13 @@ class ConanInfo(object):
         result.options.clear_indirect()
         result.full_requires = RequirementsList(requires)
         result.requires = RequirementsInfo(requires)
-        result.scope = None
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
+        result.discard_build_settings()
+        result.default_std_matching()
 
         return result
 
@@ -269,7 +254,6 @@ class ConanInfo(object):
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now
-        result.scope = Scopes.loads(parser.scope)
         result.env_values = EnvValues.loads(parser.env)
         return result
 
@@ -292,9 +276,6 @@ class ConanInfo(object):
         result.append(indent(self.full_requires.dumps()))
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
-        result.append("\n[scope]")
-        if self.scope:
-            result.append(indent(self.scope.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
         result.append("\n[env]")
         result.append(indent(self.env_values.dumps()))
@@ -320,6 +301,11 @@ class ConanInfo(object):
         else:
             return ConanInfo.loads(config_text)
 
+    @staticmethod
+    def load_from_package(package_folder):
+        info_path = os.path.join(package_folder, CONANINFO)
+        return ConanInfo.load_file(info_path)
+
     def package_id(self):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
@@ -336,16 +322,6 @@ class ConanInfo(object):
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())
         return self._package_id
-
-    def serialize(self):
-        conan_info_json = {"settings": self.settings.serialize(),
-                           "full_settings": self.full_settings.serialize(),
-                           "options": self.options.serialize(),
-                           "full_options": self.full_options.serialize(),
-                           "requires": self.requires.serialize(),
-                           "full_requires": self.full_requires.serialize(),
-                           "recipe_hash": self.recipe_hash}
-        return conan_info_json
 
     def serialize_min(self):
         """
@@ -365,6 +341,8 @@ class ConanInfo(object):
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
         using Visual Studio 14"""
+        if self.full_settings.compiler != "Visual Studio":
+            return
 
         toolsets_versions = {
             "v141": "15",
@@ -375,14 +353,45 @@ class ConanInfo(object):
             "v90": "9",
             "v80": "8"}
 
-        if self.full_settings.compiler == "Visual Studio":
-            toolset = str(self.full_settings.compiler.toolset)
-            if toolset in toolsets_versions:
-                self.settings.compiler.version = toolsets_versions[toolset]
-                self.settings.compiler.toolset = None
+        toolset = str(self.full_settings.compiler.toolset)
+        version = toolsets_versions.get(toolset)
+        if version is not None:
+            self.settings.compiler.version = version
+            del self.settings.compiler.toolset
 
     def vs_toolset_incompatible(self):
         """Will generate different packages for v140 and visual 15 than the visual 14"""
+        if self.full_settings.compiler != "Visual Studio":
+            return
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
 
+    def discard_build_settings(self):
+        # When os is defined, os_build is irrelevant for the consumer.
+        # only when os_build is alone (installers, etc) it has to be present in the package_id
+        if self.full_settings.os and self.full_settings.os_build:
+            del self.settings.os_build
+        if self.full_settings.arch and self.full_settings.arch_build:
+            del self.settings.arch_build
+
+    def include_build_settings(self):
+        self.settings.os_build = self.full_settings.os_build
+        self.settings.arch_build = self.full_settings.arch_build
+
+    def default_std_matching(self):
+        """
+        If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
+        same as specifying None, packages are the same
+        """
+
+        if self.full_settings.cppstd and \
+                self.full_settings.compiler and \
+                self.full_settings.compiler.version:
+            default = cppstd_default(str(self.full_settings.compiler),
+                                     str(self.full_settings.compiler.version))
+            if default == str(self.full_settings.cppstd):
+                self.settings.cppstd = None
+
+    def default_std_non_matching(self):
+        if self.full_settings.cppstd:
+            self.settings.cppstd = self.full_settings.cppstd

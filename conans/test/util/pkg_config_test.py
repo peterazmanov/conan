@@ -7,6 +7,7 @@ import os
 from nose.plugins.attrib import attr
 from conans.tools import PkgConfig, environment_append
 from conans.test.utils.test_files import temp_folder
+from conans.errors import ConanException
 
 libastral_pc = """
 PC FILE EXAMPLE:
@@ -26,6 +27,13 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 @attr("unix")
 class PkgConfigTest(unittest.TestCase):
+    def test_negative(self):
+        if platform.system() == "Windows":
+            return
+        pc = PkgConfig('libsomething_that_does_not_exist_in_the_world')
+        with self.assertRaises(ConanException):
+            pc.libs()
+
     def test_pc(self):
         if platform.system() == "Windows":
             return
@@ -71,3 +79,28 @@ class PkgConfigTest(unittest.TestCase):
 
             self.assertEquals(pkg_config.variables['prefix'], '/home/conan')
         os.unlink(filename)
+
+    def rpaths_libs_test(self):
+        if platform.system() == "Windows":
+            return
+        pc_content = """prefix=/my_prefix/path
+libdir=/my_absoulte_path/fake/mylib/lib
+libdir3=${prefix}/lib2
+includedir=/my_absoulte_path/fake/mylib/include
+
+Name: MyLib
+Description: Conan package: MyLib
+Version: 0.1
+Libs: -L${libdir} -L${libdir3} -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir3}"
+Cflags: -I${includedir}"""
+        tmp_dir = temp_folder()
+        filename = os.path.join(tmp_dir, 'MyLib.pc')
+        with open(filename, 'w') as f:
+            f.write(pc_content)
+        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+            expected = ("-L/my_absoulte_path/fake/mylib/lib "
+                        "-L/my_prefix/path/lib2 "
+                        "-Wl,-rpath=/my_absoulte_path/fake/mylib/lib "
+                        "-Wl,-rpath=/my_prefix/path/lib2")
+            pkg_config = PkgConfig("MyLib")
+            self.assertIn(expected, " ".join(lib for lib in pkg_config.libs))

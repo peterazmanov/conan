@@ -9,10 +9,14 @@ from conans.errors import ConanException
 _global_requester = None
 
 
-def get(url, md5='', sha1='', sha256=''):
+def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
+        pattern=None):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    filename = os.path.basename(url)
+    if not filename and ("?" in url or "=" in url):
+        raise ConanException("Cannot deduce file name form url. Use 'filename' parameter.")
+
+    filename = filename or os.path.basename(url)
     download(url, filename)
 
     if md5:
@@ -22,7 +26,7 @@ def get(url, md5='', sha1='', sha256=''):
     if sha256:
         check_sha256(filename, sha256)
 
-    unzip(filename)
+    unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern)
     os.unlink(filename)
 
 
@@ -48,10 +52,6 @@ def ftp_download(ip, filename, login='', password=''):
 def download(url, filename, verify=True, out=None, retry=2, retry_wait=5, overwrite=False,
              auth=None, headers=None):
     out = out or ConanOutput(sys.stdout, True)
-    if verify:
-        # We check the certificate using a list of known verifiers
-        import conans.client.rest.cacert as cacert
-        verify = cacert.file_path
     downloader = Downloader(_global_requester, out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                         auth=auth, headers=headers)

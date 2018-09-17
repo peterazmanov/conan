@@ -118,6 +118,22 @@ class EnvValues(object):
     def remove(self, name, package=None):
         del self._data[package][name]
 
+    def update_replace(self, key, value):
+        """ method useful for command "conan profile update"
+        to execute real update instead of soft update
+        """
+        if ":" in key:
+            package_name, key = key.split(":", 1)
+        else:
+            package_name, key = None, key
+        self._data[package_name][key] = value
+
+    def normalize_paths(self):
+        for package_name, env_vars in self._data.items():
+            for name, value in env_vars.items():
+                if not isinstance(value, list):
+                    self._data[package_name][name] = value.replace("\\", "/")
+
     def update(self, env_obj):
         """accepts other EnvValues object or DepsEnvInfo
            it prioritize the values that are already at self._data
@@ -132,7 +148,6 @@ class EnvValues(object):
             # DepsEnvInfo. the OLD values are always kept, never overwrite,
             elif isinstance(env_obj, DepsEnvInfo):
                 for (name, value) in env_obj.vars.items():
-                    name = name.upper() if name.lower() == "path" else name
                     self.add(name, value)
             else:
                 raise ConanException("unknown env type: %s" % env_obj)
@@ -143,26 +158,30 @@ class EnvValues(object):
         ret = {}
         ret_multi = {}
         # First process the global variables
-        for package, pairs in self._sorted_data:
-            for name, value in pairs.items():
-                if package is None:
-                    if isinstance(value, list):
-                        ret_multi[name] = value
-                    else:
-                        ret[name] = value
+
+        global_pairs = self._data.get(None)
+        own_pairs = self._data.get(package_name)
+
+        if global_pairs:
+            for name, value in global_pairs.items():
+                if isinstance(value, list):
+                    ret_multi[name] = value
+                else:
+                    ret[name] = value
 
         # Then the package scoped vars, that will override the globals
-        for package, pairs in self._sorted_data:
-            for name, value in pairs.items():
-                if package == package_name:
-                    if isinstance(value, list):
-                        ret_multi[name] = value
-                        if name in ret:  # Already exists a global variable, remove it
-                            del ret[name]
-                    else:
-                        ret[name] = value
-                        if name in ret_multi:  # Already exists a list global variable, remove it
-                            del ret_multi[name]
+        if own_pairs:
+            for name, value in own_pairs.items():
+                if isinstance(value, list):
+                    ret_multi[name] = value
+                    if name in ret:  # Already exists a global variable, remove it
+                        del ret[name]
+                else:
+                    ret[name] = value
+                    if name in ret_multi:  # Already exists a list global variable, remove it
+                        del ret_multi[name]
+
+        # FIXME: This dict is only used doing a ret.update(ret_multi). Unnecessary?
         return ret, ret_multi
 
     def __repr__(self):
@@ -183,10 +202,17 @@ class EnvInfo(object):
     def __init__(self):
         self._values_ = {}
 
+    @staticmethod
+    def _adjust_casing(name):
+        """We don't want to mix "path" with "PATH", actually we don`t want to mix anything
+        with different casing. Furthermore in Windows all is uppercase, but managing all in
+        upper case will be breaking."""
+        return name.upper() if name.lower() == "path" else name
+
     def __getattr__(self, name):
         if name.startswith("_") and name.endswith("_"):
             return super(EnvInfo, self).__getattr__(name)
-
+        name = self._adjust_casing(name)
         attr = self._values_.get(name)
         if not attr:
             self._values_[name] = []
@@ -195,6 +221,7 @@ class EnvInfo(object):
     def __setattr__(self, name, value):
         if name.startswith("_") and name.endswith("_"):
             return super(EnvInfo, self).__setattr__(name, value)
+        name = self._adjust_casing(name)
         self._values_[name] = value
 
     @property

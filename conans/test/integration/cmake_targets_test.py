@@ -49,17 +49,43 @@ int main(){
 
 @attr("slow")
 class CMakeTargetsTest(unittest.TestCase):
+    def transitive_flags_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Charlie(ConanFile):
+    def package_info(self):
+        self.cpp_info.sharedlinkflags = ["CharlieFlag"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Charlie/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Beta(ConanFile):
+    requires = "Charlie/0.1@user/testing"
+    def package_info(self):
+        self.cpp_info.sharedlinkflags = ["BetaFlag"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Beta/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Alpha(ConanFile):
+    requires = "Beta/0.1@user/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -g cmake")
+        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn('set(CONAN_SHARED_LINKER_FLAGS '
+                      '"CharlieFlag BetaFlag ${CONAN_SHARED_LINKER_FLAGS}")', cmake)
 
     def header_only_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,
                      "hello.h": hello})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
         self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
         self.assertNotIn("', skipping the version check...", client.user_io.out)
@@ -75,8 +101,8 @@ class CMakeTargetsTest(unittest.TestCase):
             debug_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MDd'
             release_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MD'
 
-            client.run('install %s -s build_type=Debug -g cmake_multi' % debug_install)
-            client.run('install %s -s build_type=Release -g cmake_multi' % release_install)
+            client.run('install . %s -s build_type=Debug -g cmake_multi' % debug_install)
+            client.run('install . %s -s build_type=Release -g cmake_multi' % release_install)
             client.runner("cmake .", cwd=client.current_folder)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
             self.assertNotIn("', skipping the version check...", client.user_io.out)
@@ -89,7 +115,6 @@ class CMakeTargetsTest(unittest.TestCase):
         if platform.system() != "Darwin":
             return
 
-
         client = TestClient()
         conanfile_fr = conanfile_py + '''
     def package_info(self):
@@ -99,11 +124,11 @@ class CMakeTargetsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_fr,
                      "hello.h": hello})
 
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
 
-        client.run("install -g cmake")
+        client.run("install . -g cmake")
         bili = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("-framework Foundation", bili)

@@ -4,42 +4,15 @@ from os.path import join, normpath
 import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
-import sys
 
 
-def _check_long_paths_support():
-    if platform.system() != "Windows":
-        return True
-    if sys.version_info < (3, 6):
-        return False
-    from six.moves import winreg
-    try:
-        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                              r"SYSTEM\CurrentControlSet\Control\FileSystem")
-        result = winreg.QueryValueEx(hKey, "LongPathsEnabled")
-        key_value = result[0]
-        return key_value == 1
-    except EnvironmentError:
-        return False
-    finally:
-        winreg.CloseKey(hKey)
-    return False
-
-
-long_paths_support = _check_long_paths_support()
-
-if not long_paths_support:
-    from conans.util.windows import path_shortener, rm_conandir
+if platform.system() == "Windows":
+    from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
 else:
     def path_shortener(x, _):
         return x
     conan_expand_user = os.path.expanduser
     rm_conandir = rmdir
-
-if platform.system() == "Windows":
-    from conans.util.windows import conan_expand_user
-else:
-    conan_expand_user = os.path.expanduser
 
 
 EXPORT_FOLDER = "export"
@@ -55,16 +28,17 @@ CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
 BUILD_INFO = 'conanbuildinfo.txt'
 BUILD_INFO_GCC = 'conanbuildinfo.gcc'
+BUILD_INFO_COMPILER_ARGS = 'conanbuildinfo.args'
 BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
 BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
-BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 PUT_HEADERS = "artifacts.properties"
+SCM_FOLDER = "scm_folder.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -77,7 +51,8 @@ DEFAULT_PROFILE_NAME = "default"
 
 
 def get_conan_user_home():
-    tmp = conan_expand_user(os.getenv("CONAN_USER_HOME", "~"))
+    user_home = os.getenv("CONAN_USER_HOME", "~")
+    tmp = conan_expand_user(user_home)
     if not os.path.isabs(tmp):
         raise Exception("Invalid CONAN_USER_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
@@ -91,7 +66,7 @@ def is_case_insensitive_os():
 
 
 if is_case_insensitive_os():
-    def _check_ref_case(conan_reference, conan_folder, store_folder):
+    def check_ref_case(conan_reference, conan_folder, store_folder):
         if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
             return
         # If exists, lets check path
@@ -109,7 +84,7 @@ if is_case_insensitive_os():
                                      % (str(conan_reference), offending))
             tmp = os.path.normpath(tmp + os.sep + part)
 else:
-    def _check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
+    def check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
         pass
 
 
@@ -147,17 +122,8 @@ class SimplePaths(object):
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
-        _check_ref_case(conan_reference, export, self.store)
+        check_ref_case(conan_reference, export, self.store)
         return normpath(join(export, CONANFILE))
-
-    def digestfile_conanfile(self, conan_reference):
-        export = self.export(conan_reference)
-        _check_ref_case(conan_reference, export, self.store)
-        return normpath(join(export, CONAN_MANIFEST))
-
-    def digestfile_package(self, package_reference, short_paths=False):
-        assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.package(package_reference, short_paths), CONAN_MANIFEST))
 
     def builds(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -187,3 +153,6 @@ class SimplePaths(object):
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
+
+    def scm_folder(self, conan_reference):
+        return normpath(join(self.conan(conan_reference), SCM_FOLDER))

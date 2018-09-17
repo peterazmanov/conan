@@ -2,10 +2,10 @@ import json
 import os
 
 
-from conans.client.conan_api import prepare_cwd
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.files import save
+from conans.unicode import get_cwd
 
 
 class CommandOutputer(object):
@@ -24,13 +24,16 @@ class CommandOutputer(object):
         for p in sorted(profiles):
             self.user_io.out.info(p)
 
-    def remote_list(self, remotes):
+    def remote_list(self, remotes, raw):
         for r in remotes:
-            self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+            if raw:
+                self.user_io.out.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+            else:
+                self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
-        for ref, remote in refs.items():
-            self.user_io.out.info("%s: %s" % (ref, remote))
+        for ref, remote_name in refs.items():
+            self.user_io.out.info("%s: %s" % (ref, remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
@@ -42,54 +45,69 @@ class CommandOutputer(object):
         if json_output is True:  # To the output
             self.user_io.out.write(json_str)
         else:  # Path to a file
-            cwd = prepare_cwd(cwd)
+            cwd = os.path.abspath(cwd or get_cwd())
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
+    def json_output(self, info, json_output, cwd):
+        cwd = os.path.abspath(cwd or get_cwd())
+        if not os.path.isabs(json_output):
+            json_output = os.path.join(cwd, json_output)
+
+        def date_handler(obj):
+            return obj.isoformat() if hasattr(obj, 'isoformat') else obj
+
+        save(json_output, json.dumps(info, default=date_handler))
+        self.user_io.out.writeln("")
+        self.user_io.out.info("JSON file created at '%s'" % json_output)
+
     def _read_dates(self, deps_graph):
         ret = {}
-        for ref, _ in sorted(deps_graph.nodes):
+        for node in sorted(deps_graph.nodes):
+            ref = node.conan_ref
             if ref:
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
         return ret
 
     def nodes_to_build(self, nodes_to_build):
-        self.user_io.out.info(", ".join(nodes_to_build))
+        self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
-    def info(self, deps_graph, graph_updates_info, only, remote, package_filter, show_paths, project_reference):
+    def info(self, deps_graph, only, package_filter, show_paths):
         registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
-        Printer(self.user_io.out).print_info(deps_graph, project_reference,
-                                             only, registry, graph_updates_info=graph_updates_info,
-                                             remote=remote, node_times=self._read_dates(deps_graph),
+        Printer(self.user_io.out).print_info(deps_graph,
+                                             only, registry,
+                                             node_times=self._read_dates(deps_graph),
                                              path_resolver=self.client_cache, package_filter=package_filter,
                                              show_paths=show_paths)
 
-    def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
+    def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
-            from conans.client.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(project_reference, deps_graph)
+            from conans.client.graph.grapher import ConanHTMLGrapher
+            grapher = ConanHTMLGrapher(deps_graph)
         else:
-            from conans.client.grapher import ConanGrapher
-            grapher = ConanGrapher(project_reference, deps_graph)
+            from conans.client.graph.grapher import ConanGrapher
+            grapher = ConanGrapher(deps_graph)
 
-        cwd = prepare_cwd(cwd)
+        cwd = os.path.abspath(cwd or get_cwd())
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
 
-    def print_search_references(self, references, pattern, raw):
+    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self.user_io.out)
-        printer.print_search_recipes(references, pattern, raw)
+        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
-    def print_search_packages(self, ordered_packages, pattern, recipe_hash, packages_query, table):
+    def print_search_packages(self, search_info, reference, packages_query, table,
+                                outdated=False):
         if table:
-            from conans.client.grapher import html_binary_graph
-            html_binary_graph(pattern, ordered_packages, recipe_hash, table)
+            from conans.client.graph.grapher import html_binary_graph
+            html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
-            printer.print_search_packages(ordered_packages, pattern, recipe_hash, packages_query)
+            printer.print_search_packages(search_info, reference, packages_query,
+                                          outdated=outdated)
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
@@ -115,3 +133,25 @@ class CommandOutputer(object):
             lexer = TextLexer()
 
         self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))
+
+    def print_user_list(self, info):
+        for remote in info["remotes"]:
+            authenticated = " [Authenticated]" if remote["authenticated"] else ""
+            anonymous = " (anonymous)" if not remote["user_name"] else ""
+            self.user_io.out.info("Current user of remote '%s' set to: '%s'%s%s" %
+                                  (remote["name"], str(remote["user_name"]), anonymous,
+                                   authenticated))
+
+    def print_user_set(self, remote_name, prev_user, user):
+        previous_username = prev_user or "None"
+        previous_anonymous = " (anonymous)" if not prev_user else ""
+        username = user or "None"
+        anonymous = " (anonymous)" if not user else ""
+
+        if prev_user == user:
+            self.user_io.out.info("User of remote '%s' is already '%s'%s" %
+                                  (remote_name, previous_username, previous_anonymous))
+        else:
+            self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
+                                  (remote_name, previous_username, previous_anonymous, username,
+                                   anonymous))

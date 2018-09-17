@@ -1,10 +1,9 @@
 import hashlib
 import os
+import tempfile
 
-
-from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
 from conans.util.files import rmdir
+from conans.util.env_reader import get_env
 
 
 class PackageTester(object):
@@ -13,77 +12,48 @@ class PackageTester(object):
         self._manager = manager
         self._user_io = user_io
 
-    def _call_requirements(self, conanfile_path, profile):
-
-        loader = self._manager.get_loader(profile)
-        test_conanfile = loader.load_conan(conanfile_path, self._user_io.out, consumer=True)
-        try:
-            if hasattr(test_conanfile, "requirements"):
-                test_conanfile.requirements()
-        except Exception as e:
-            raise ConanException("Error in test_package/conanfile.py requirements(). %s" % str(e))
-
-        return test_conanfile
-
-    def install_build_and_test(self, conanfile_abs_path, profile, name, version, user, channel,
-                               remote, update, build_modes=None):
+    def install_build_and_test(self, conanfile_abs_path, reference, profile,
+                               remote_name, update, build_modes=None, manifest_folder=None,
+                               manifest_verify=False, manifest_interactive=False, keep_build=False,
+                               test_build_folder=None):
         """
         Installs the reference (specified by the parameters or extracted from the test conanfile)
         and builds the test_package/conanfile.py running the test() method.
         """
         base_folder = os.path.dirname(conanfile_abs_path)
-        build_folder = self._build_folder(profile, base_folder)
-        rmdir(build_folder)
-        test_conanfile = self._call_requirements(conanfile_abs_path, profile)
-        ref = self._get_reference_to_test(test_conanfile.requires, name, version, user, channel)
+        test_build_folder, delete_after_build = self._build_folder(test_build_folder, profile, base_folder)
+        rmdir(test_build_folder)
         if build_modes is None:
             build_modes = ["never"]
-        self._manager.install(inject_require=ref,
-                              reference=base_folder,
-                              install_folder=build_folder,
-                              remote=remote,
-                              profile=profile,
-                              update=update,
-                              build_modes=build_modes)
-        self._manager.build(conanfile_abs_path, base_folder, build_folder, package_folder=None,
-                            install_folder=build_folder, test=str(ref))
+        try:
+            self._manager.install(create_reference=reference,
+                                  reference=conanfile_abs_path,
+                                  install_folder=test_build_folder,
+                                  remote_name=remote_name,
+                                  profile=profile,
+                                  update=update,
+                                  build_modes=build_modes,
+                                  manifest_folder=manifest_folder,
+                                  manifest_verify=manifest_verify,
+                                  manifest_interactive=manifest_interactive,
+                                  keep_build=keep_build)
+            self._manager.build(conanfile_abs_path, base_folder, test_build_folder, package_folder=None,
+                                install_folder=test_build_folder, test=str(reference))
+        finally:
+            if delete_after_build:
+                os.chdir(base_folder)    # Required for windows where deleting the cwd is not possible.
+                rmdir(test_build_folder)
 
     @staticmethod
-    def _build_folder(profile, test_folder):
+    def _build_folder(test_build_folder, profile, base_folder):
+        # Use the specified build folder when available.
+        if test_build_folder:
+            return (os.path.abspath(test_build_folder), False)
+
+        # Otherwise, generate a new test folder depending on the configuration.
+        if get_env('CONAN_TEMP_TEST_FOLDER', False):
+            return (tempfile.mkdtemp(prefix='conans'), True)
+
         sha = hashlib.sha1("".join(profile.dumps()).encode()).hexdigest()
-        build_folder = os.path.join(test_folder, "build", sha)
-        return build_folder
-
-    @staticmethod
-    def _get_reference_to_test(requires, name, version, user, channel):
-        """Given the requirements of a test_package/conanfile.py and a user specified values,
-        check if there are any conflict in the specified version and return the package to be
-        tested"""
-
-        # User do not specify anything, and there is a require
-        if name is None and len(requires.items()) == 1:
-            _, req = list(requires.items())[0]
-            pname, pversion, puser, pchannel = req.conan_reference
-        # The specified name is already in the test_package/conanfile requires, check conflicts
-        elif name is not None and name in requires:
-            a_ref = requires[name].conan_reference
-            if version and (version != a_ref.version):
-                raise ConanException("The specified version doesn't match with the "
-                                     "requirement of the test_package/conanfile.py")
-            pname, pversion, puser, pchannel = a_ref
-            if user and channel:  # Override from the command line
-                puser, pchannel = user, channel
-        # Different from the requirements in test_package
-        elif name is not None:
-            if not version or not channel or not user:
-                reqs = ", ".join(requires.keys())
-                raise ConanException("The package name '%s' doesn't match with any requirement "
-                                     "in the testing conanfile.py: %s" % (name, reqs))
-            else:
-                pname, pversion, puser, pchannel = name, version, user, channel
-        else:
-            raise ConanException("Cannot deduce the reference to be tested, specify a reference in "
-                                 "the 'conan test' command or a single requirement in the "
-                                 "test_package/conanfile.py file.")
-
-        return ConanFileReference(pname, pversion, puser, pchannel)
+        build_folder = os.path.join(base_folder, "build", sha)
+        return (build_folder, False)

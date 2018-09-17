@@ -1,4 +1,6 @@
 import os
+import shutil
+from os.path import join, normpath
 from collections import OrderedDict
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
@@ -6,14 +8,15 @@ from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
-from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
-from conans.util.files import save, load, normalize
-from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock
+from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case,\
+    CONAN_MANIFEST
+from conans.util.files import save, load, normalize, list_folder_subdirs
+from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
+from conans.unicode import get_cwd
 
 
 CONAN_CONF = 'conan.conf'
@@ -22,6 +25,13 @@ LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 PROFILES_FOLDER = "profiles"
 
+# Client certificates
+CLIENT_CERT = "client.crt"
+CLIENT_KEY = "client.key"
+
+# Server authorities file
+CACERT_FILE = "cacert.pem"
+
 
 class ClientCache(SimplePaths):
     """ Class to represent/store/compute all the paths involved in the execution
@@ -29,14 +39,21 @@ class ClientCache(SimplePaths):
     """
 
     def __init__(self, base_folder, store_folder, output):
-        self.conan_folder = os.path.join(base_folder, ".conan")
+        self.conan_folder = join(base_folder, ".conan")
         self._conan_config = None
         self._settings = None
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
         self._default_profile = None
         self._no_lock = None
+        self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
+        self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
+
         super(ClientCache, self).__init__(self._store_folder)
+
+    @property
+    def cacert_path(self):
+        return normpath(join(self.conan_folder, CACERT_FILE))
 
     def _no_locks(self):
         if self._no_lock is None:
@@ -46,24 +63,28 @@ class ClientCache(SimplePaths):
     def conanfile_read_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return ReadLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
-                        self._output)
+        return ReadLock(self.conan(conan_ref), conan_ref, self._output)
 
     def conanfile_write_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return WriteLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
-                         self._output)
+        return WriteLock(self.conan(conan_ref), conan_ref, self._output)
+
+    def conanfile_lock_files(self, conan_ref):
+        # Used in ConanRemover
+        if self._no_locks():
+            return ()
+        return WriteLock(self.conan(conan_ref), conan_ref, self._output).files
 
     def package_lock(self, package_ref):
         if self._no_locks():
             return NoLock()
-        return SimpleLock(os.path.join(self.conan(package_ref.conan), "locks",
-                                       package_ref.package_id))
+        return SimpleLock(join(self.conan(package_ref.conan), "locks",
+                               package_ref.package_id))
 
     @property
     def put_headers_path(self):
-        return os.path.join(self.conan_folder, PUT_HEADERS)
+        return join(self.conan_folder, PUT_HEADERS)
 
     def read_put_headers(self):
         ret = {}
@@ -86,7 +107,7 @@ class ClientCache(SimplePaths):
 
     @property
     def registry(self):
-        return os.path.join(self.conan_folder, REGISTRY)
+        return join(self.conan_folder, REGISTRY)
 
     @property
     def conan_config(self):
@@ -99,47 +120,52 @@ class ClientCache(SimplePaths):
 
     @property
     def localdb(self):
-        return os.path.join(self.conan_folder, LOCALDB)
+        return join(self.conan_folder, LOCALDB)
 
     @property
     def conan_conf_path(self):
-        return os.path.join(self.conan_folder, CONAN_CONF)
+        return join(self.conan_folder, CONAN_CONF)
 
     @property
     def profiles_path(self):
-        return os.path.join(self.conan_folder, PROFILES_FOLDER)
+        return join(self.conan_folder, PROFILES_FOLDER)
 
     @property
     def settings_path(self):
-        return os.path.join(self.conan_folder, CONAN_SETTINGS)
+        return join(self.conan_folder, CONAN_SETTINGS)
 
     @property
     def default_profile_path(self):
         if os.path.isabs(self.conan_config.default_profile):
             return self.conan_config.default_profile
         else:
-            return os.path.expanduser(os.path.join(self.conan_folder, PROFILES_FOLDER,
-                                                   self.conan_config.default_profile))
+            return join(self.conan_folder, PROFILES_FOLDER,
+                        self.conan_config.default_profile)
 
     @property
     def default_profile(self):
         if self._default_profile is None:
             if not os.path.exists(self.default_profile_path):
                 self._output.writeln("Auto detecting your dev setup to initialize the "
-                                     "default profile (%s)" % self.default_profile_path, Color.BRIGHT_YELLOW)
+                                     "default profile (%s)" % self.default_profile_path,
+                                     Color.BRIGHT_YELLOW)
 
                 default_settings = detect_defaults_settings(self._output)
                 self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
-                self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]), Color.BRIGHT_YELLOW)
-                self._output.writeln("*** You can change them in %s ***" % self.default_profile_path, Color.BRIGHT_MAGENTA)
-                self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n", Color.BRIGHT_MAGENTA)
+                self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
+                                     Color.BRIGHT_YELLOW)
+                self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
+                                     Color.BRIGHT_MAGENTA)
+                self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
+                                     Color.BRIGHT_MAGENTA)
 
                 self._default_profile = Profile()
                 tmp = OrderedDict(default_settings)
                 self._default_profile.update_settings(tmp)
                 save(self.default_profile_path, self._default_profile.dumps())
             else:
-                self._default_profile, _ = read_profile(self.default_profile_path, None, None)
+                self._default_profile, _ = read_profile(self.default_profile_path, get_cwd(),
+                                                        self.profiles_path)
 
             # Mix profile settings with environment
             mixed_settings = _mix_settings_with_env(self._default_profile.settings)
@@ -169,8 +195,8 @@ class ClientCache(SimplePaths):
         packages_dir = self.packages(conan_reference)
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
-                        if os.path.isdir(os.path.join(packages_dir, dirname))]
-        except:  # if there isn't any package folder
+                        if os.path.isdir(join(packages_dir, dirname))]
+        except OSError:  # if there isn't any package folder
             packages = []
         return packages
 
@@ -180,45 +206,33 @@ class ClientCache(SimplePaths):
         builds_dir = self.builds(conan_reference)
         try:
             builds = [dirname for dirname in os.listdir(builds_dir)
-                      if os.path.isdir(os.path.join(builds_dir, dirname))]
-        except:  # if there isn't any package folder
+                      if os.path.isdir(join(builds_dir, dirname))]
+        except OSError:  # if there isn't any package folder
             builds = []
         return builds
 
     def load_manifest(self, conan_reference):
         """conan_id = sha(zip file)"""
-        filename = self.digestfile_conanfile(conan_reference)
-        return FileTreeManifest.loads(load(filename))
+        assert isinstance(conan_reference, ConanFileReference)
+        export_folder = self.export(conan_reference)
+        check_ref_case(conan_reference, export_folder, self.store)
+        return FileTreeManifest.load(export_folder)
 
     def load_package_manifest(self, package_reference):
         """conan_id = sha(zip file)"""
-        filename = self.digestfile_package(package_reference, short_paths=None)
-        return FileTreeManifest.loads(load(filename))
-
-    @staticmethod
-    def read_package_recipe_hash(package_folder):
-        filename = os.path.join(package_folder, CONANINFO)
-        info = ConanInfo.loads(load(filename))
-        return info.recipe_hash
-
-    def conan_manifests(self, conan_reference):
-        digest_path = self.digestfile_conanfile(conan_reference)
-        if not os.path.exists(digest_path):
-            return None, None
-        export_sources_path = self.export_sources(conan_reference, short_paths=None)
-        return self._digests(digest_path, export_sources_path)
+        package_folder = self.package(package_reference, short_paths=None)
+        return FileTreeManifest.load(package_folder)
 
     def package_manifests(self, package_reference):
-        digest_path = self.digestfile_package(package_reference, short_paths=None)
-        if not os.path.exists(digest_path):
+        package_folder = self.package(package_reference, short_paths=None)
+        if not os.path.exists(os.path.join(package_folder, CONAN_MANIFEST)):
             return None, None
-        return self._digests(digest_path)
+        return self._digests(package_folder)
 
     @staticmethod
-    def _digests(digest_path, exports_sources_folder=None):
-        readed_digest = FileTreeManifest.loads(load(digest_path))
-        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path),
-                                                  exports_sources_folder)
+    def _digests(folder, exports_sources_folder=None):
+        readed_digest = FileTreeManifest.load(folder)
+        expected_digest = FileTreeManifest.create(folder, exports_sources_folder)
         return readed_digest, expected_digest
 
     def delete_empty_dirs(self, deleted_refs):
@@ -231,6 +245,24 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def remove_locks(self):
+        folders = list_folder_subdirs(self._store_folder, 4)
+        for folder in folders:
+            conan_folder = os.path.join(self._store_folder, folder)
+            Lock.clean(conan_folder)
+            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+
+    def remove_package_locks(self, reference):
+        conan_folder = self.conan(reference)
+        Lock.clean(conan_folder)
+        shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+
+    def invalidate(self):
+        self._conan_config = None
+        self._settings = None
+        self._default_profile = None
+        self._no_lock = None
 
 
 def _mix_settings_with_env(settings):

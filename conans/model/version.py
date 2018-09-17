@@ -73,6 +73,7 @@ class Version(str):
 
     @property
     def build(self):
+        self.as_list
         if hasattr(self, "_build"):
             return self._build
         return ""
@@ -98,6 +99,18 @@ class Version(str):
         if not isinstance(other, Version):
             other = Version(other)
 
+        # Check equals
+        def get_el(a_list, index):
+            if len(a_list) - 1 < index:
+                return 0  # out of range, 4 == 4.0 == 4.0.0
+            return a_list[index]
+
+        equals = all(get_el(other.as_list, ind) == get_el(self.as_list, ind)
+                     for ind in range(0, max(len(other.as_list), len(self.as_list))))
+        if equals:
+            return 0
+
+        # Check greater than or less than
         other_list = other.as_list
         for ind, el in enumerate(self.as_list):
             if ind + 1 > len(other_list):
@@ -117,8 +130,6 @@ class Version(str):
                 return -1
         if len(other_list) > len(self.as_list):
             return -1
-        else:
-            return 0
 
     def __gt__(self, other):
         return self.__cmp__(other) == 1
@@ -131,3 +142,12 @@ class Version(str):
 
     def __ge__(self, other):
         return self.__cmp__(other) in [0, 1]
+
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return str.__hash__(self)
