@@ -1,16 +1,33 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+variables:
+  runner: '.ci/jenkins/runner.py'
+  module: '"conans.test"'
+  api_conf: 'v1'
+  flavor: 'no_revisions'
+  num_cores: 4
+  workdir: "."
+  sourcedir: "."
+
+resources:
+  containers:
+  - container: conan_tests
+    image: lasote/conantests
 
 pool:
   vmImage: 'Ubuntu 16.04'
+
+strategy:
+  matrix:
+    linux_py2:
+      pyver: py27
+    linux_py3:
+      pyver: py36
+
+container: conan_tests
+
 
 steps:
 - script: echo Hello, world!
   displayName: 'Run a one-line script'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
+  displayName: 'Run test suite'
