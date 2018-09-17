@@ -12,9 +12,6 @@ resources:
   - container: conan_tests
     image: lasote/conantests_azure
 
-pool:
-  vmImage: 'Ubuntu 16.04'
-
 strategy:
   matrix:
     linux_py2:
@@ -22,12 +19,24 @@ strategy:
     linux_py3:
       pyver: py36
 
-container: conan_tests
+jobs:
+- job: Linux py27
+  pool:
+    vmImage: 'ubuntu-16.04'
+  container: conan_tests
+  steps:
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
+
+- job: macOS
+  pool:
+    vmImage: 'xcode9-macos10.13'
+  steps:
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
+
+- job: Windows
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
 
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
-  displayName: 'Run test suite'
