@@ -12,15 +12,19 @@ resources:
   - container: conan_tests
     image: lasote/conantests_azure
 
-strategy:
-  matrix:
-    linux_py2:
-      pyver: py27
-    linux_py3:
-      pyver: py36
-
 jobs:
 - job: Linux py27
+  variables:
+    pyver: py27
+  pool:
+    vmImage: 'ubuntu-16.04'
+  container: conan_tests
+  steps:
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
+
+- job: Linux py36
+  variables:
+    pyver: py27
   pool:
     vmImage: 'ubuntu-16.04'
   container: conan_tests
@@ -28,12 +32,16 @@ jobs:
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
 
 - job: macOS
+  variables:
+    pyver: py27
   pool:
     vmImage: 'xcode9-macos10.13'
   steps:
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
 
 - job: Windows
+  variables:
+    pyver: py27
   pool:
     vmImage: 'vs2017-win2016'
   steps:
