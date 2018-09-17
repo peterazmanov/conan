@@ -21,7 +21,7 @@ jobs:
     vmImage: 'ubuntu-16.04'
   container: conan_tests
   steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(num_cores) --server_api=$(api_conf) -f $(flavor)
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 - job: LinuxPy36
   variables:
@@ -31,7 +31,7 @@ jobs:
     vmImage: 'ubuntu-16.04'
   container: conan_tests
   steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(num_cores) --server_api=$(api_conf) -f $(flavor)
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 - job: macOS
   variables:
@@ -39,7 +39,7 @@ jobs:
   pool:
     vmImage: 'xcode9-macos10.13'
   steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(num_cores) --server_api=$(api_conf) -f $(flavor)
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 - job: Windows
   variables:
@@ -47,6 +47,6 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(num_cores) --server_api=$(api_conf) -f $(flavor)
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 
