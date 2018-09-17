@@ -13,7 +13,7 @@ resources:
     image: lasote/conantests_azure
 
 jobs:
-- job: Linux py27
+- job: LinuxPy27
   variables:
     pyver: py27
   pool:
@@ -22,7 +22,7 @@ jobs:
   steps:
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api $(numcores) --server_api=$(api_conf) -f $(flavor)
 
-- job: Linux py36
+- job: LinuxPy36
   variables:
     pyver: py27
   pool:
