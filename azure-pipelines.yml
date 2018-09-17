@@ -13,7 +13,7 @@ resources:
     image: lasote/conantests
 
 pool:
-  vmImage: 'Ubuntu 16.04'
+  vmImage: 'Hosted Ubuntu 1604'
 
 strategy:
   matrix:
