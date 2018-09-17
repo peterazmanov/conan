@@ -21,7 +21,7 @@ jobs:
     vmImage: 'ubuntu-16.04'
   container: conan_tests
   steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
+  - script: who && python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 - job: LinuxPy36
   variables:
@@ -50,3 +50,7 @@ jobs:
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
 
+
+
+!!! SOURCES ESTAN CLONADOS EN home/vsts/work/1/s/.git/ BUSCAR VARIABLE
+!!! NO TIENE PERMISO PARA /home/conan/venv, ¿que usuario es?
