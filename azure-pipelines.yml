@@ -17,4 +17,4 @@ jobs:
 
 - template: .ci/azure/build_linux.yml
   parameters:
-    pyver: py27
+    pyver: 'py27'
