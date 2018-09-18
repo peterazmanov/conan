@@ -35,6 +35,7 @@ jobs:
       destinationFolder: 'cmake'
   - script: dir
   - script: set PATH=%cd%/cmake/bin;%PATH%
+  - script: cmake --version
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor) && type $(sourcedir)/tests.json
     displayName: Regular tests
     env:
