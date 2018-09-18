@@ -46,7 +46,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
         pip_installs += "pip install -r conans/requirements_osx.txt && "
 
     #  --nocapture
-    timer = "--with-timing"
+    timer = '--with-timing --output-directory="%s" ' % source_folder
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
               "{pip_installs} " \
