@@ -6,6 +6,8 @@ parameters:
 
 jobs:
 - job: ${{ parameters.name }}
+  variables:
+    pyver: ${{ parameters.pyver }}
   pool:
     vmImage: 'ubuntu-16.04'
   container: conan_tests
