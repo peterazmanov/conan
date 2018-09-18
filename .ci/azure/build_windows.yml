@@ -5,6 +5,8 @@ parameters:
 
 jobs:
 - job: Windows${{ parameters.name }}
+  timeoutInMinutes: 0
+  cancelTimeoutInMinutes: 0
   variables:
     pyver: ${{ parameters.pyver }}
   pool:
@@ -21,4 +23,6 @@ jobs:
       addToPath: true
   - script: pip install virtualenv
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
+    displayName: Regular tests
   - script: python $(runner) conans.test.remote.rest_api_test $(pyver) $(workdir) .
+    displayName: REST API tests

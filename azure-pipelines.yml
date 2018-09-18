@@ -12,10 +12,6 @@ resources:
   - container: conan_tests
     image: lasote/conan_tests_azure
 
-pool:
-  timeoutInMinutes: 0
-  cancelTimeoutInMinutes: 0
-
 jobs:
 
 - template: .ci/azure/build_linux.yml
