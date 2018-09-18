@@ -26,7 +26,7 @@ jobs:
   - script: python --version
     displayName: Show python version
   - script: choco install cmake --version 3.7.2 -y & exit 0
-  - script: type c:/cmake.install_msi_install.log
+  - script: type "c:\\cmake.install_msi_install.log"
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
     displayName: Regular tests
     env:
