@@ -17,6 +17,7 @@ jobs:
     displayName: Regular tests
     env:
       CONAN_RECIPE_LINTER: 'False'
+  - script: type setup.json
+  - script: type tests.json
   - script: python $(runner) conans.test.remote.rest_api_test $(pyver) $(workdir) /tmp
     displayName: REST API tests
-
