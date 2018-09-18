@@ -3,11 +3,14 @@ import os
 import platform
 from contextlib import contextmanager
 
-winpylocation = {"py27": "C:\\Python27amd64\\python.exe",
+winpylocation = {"py27": "python.exe",
+                 "py34": "python.exe",
                  "py36": "python.exe"}
 
-macpylocation = {"py27": "/usr/local/bin/python",
-                 "py37": "/usr/local/bin/python3"}
+macpylocation = {"py27": "python",
+                 "py34": "python",
+                 "py36": "python",
+                 "py37": "python"}
 
 linuxpylocation = {"py27": "/usr/bin/python2.7",
                    "py34": "/usr/bin/python3.4",

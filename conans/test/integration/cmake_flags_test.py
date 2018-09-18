@@ -390,7 +390,7 @@ conan_set_std()
         if cmake_version < Version("3.12.0"):
             self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
         else:
-            self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
+            self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS OFF", client.out)
 
     def fpic_applied_test(self):
         conanfile = """
