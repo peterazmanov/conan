@@ -12,35 +12,24 @@ resources:
   - container: conan_tests
     image: lasote/conan_tests_azure
 
+
 jobs:
-- job: LinuxPy27
-  variables:
-    pyver: py27
-    workdir: "/home/conan/"
-  pool:
-    vmImage: 'ubuntu-16.04'
-  container: conan_tests
-  steps:
-  - script: whoami
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
-- job: LinuxPy36
-  variables:
+- template: .ci/azure/build_linux.yml
+  parameters:
+    name: LinuxPy27
     pyver: py27
-    workdir: "/home/conan/"
-  pool:
-    vmImage: 'ubuntu-16.04'
-  container: conan_tests
-  steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
 
-- job: macOS
-  variables:
-    pyver: py27
-  pool:
-    vmImage: 'xcode9-macos10.13'
-  steps:
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
+- template: .ci/azure/build_linux.yml
+  parameters:
+    name: LinuxPy36
+    pyver: py36
+
+- template: .ci/azure/build_macos.yml
+  parameters:
+    name: Macospy36
+    pyver: py36
+
 
 - job: Windows
   variables:
