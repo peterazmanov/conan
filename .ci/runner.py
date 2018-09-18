@@ -52,7 +52,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
               "{pip_installs} " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
-              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} {timer}" \
+              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} {timer} " \
               "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
