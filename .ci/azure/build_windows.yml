@@ -27,7 +27,7 @@ jobs:
     displayName: Show python version
   - script: rmdir "C:\Program Files\CMake" /s /Q
   - script: choco install cmake.install --version 3.8.2 -y --allow-downgrade --force & exit 0
-  - script: type "C:\ProgramData\chocolatey\logs\chocolatey.log"
+  - script: cmake --version
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
     displayName: Regular tests
     env:
