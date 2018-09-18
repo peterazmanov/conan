@@ -13,11 +13,11 @@ jobs:
   steps:
   - task: UsePythonVersion@0
     inputs:
-      - ${{ if eq(parameters.pyver, 'py36') }}:
+      ${{ if eq(parameters.pyver, 'py36') }}:
         versionSpec: '3.6'
-      - ${{ if eq(parameters.pyver, 'py34') }}:
+      ${{ if eq(parameters.pyver, 'py34') }}:
         versionSpec: '3.4'
-      - ${{ if eq(parameters.pyver, 'py27') }}:
+      ${{ if eq(parameters.pyver, 'py27') }}:
         versionSpec: '2.7'
       addToPath: true
   - script: pip install virtualenv
