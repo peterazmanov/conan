@@ -11,5 +11,5 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-  - script: sudo pip install virtualenv
+  - script: pip install virtualenv
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)

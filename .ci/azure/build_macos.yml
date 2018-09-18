@@ -11,8 +11,5 @@ jobs:
   pool:
     vmImage: 'xcode9-macos10.13'
   steps:
-  - script: which python3
-  - script: which python2
-  - script: which python
   - script: sudo pip install virtualenv
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
