@@ -35,11 +35,9 @@ jobs:
       destinationFolder: 'cmake'
   - script: dir
   - script: set PATH=%cd%/cmake/bin;%PATH%
-  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
+  - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor) && type $(sourcedir)/tests.json
     displayName: Regular tests
     env:
       CONAN_RECIPE_LINTER: 'False'
-  - script: type $(sourcedir)/setup.json
-  - script: type $(sourcedir)/tests.json
   - script: python $(runner) conans.test.remote.rest_api_test $(pyver) $(workdir) .
     displayName: REST API tests
