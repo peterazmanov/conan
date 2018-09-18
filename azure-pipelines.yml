@@ -3,7 +3,7 @@ variables:
   module: '"conans.test"'
   api_conf: v1
   flavor: no_revisions
-  num_cores: 4
+  num_cores: 2
   workdir: $(Build.Repository.LocalPath)
   sourcedir: $(Build.Repository.LocalPath)
 
