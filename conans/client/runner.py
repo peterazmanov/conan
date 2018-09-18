@@ -1,9 +1,12 @@
+import io
 import os
 import sys
-from subprocess import Popen, PIPE
+from contextlib import contextmanager
+from subprocess import Popen, PIPE, STDOUT
 from conans.util.files import decode_text
 from conans.errors import ConanException
 import six
+from conans.unicode import get_cwd
 
 
 class ConanRunner(object):
@@ -13,13 +16,18 @@ class ConanRunner(object):
         self._generate_run_log_file = generate_run_log_file
         self._log_run_to_output = log_run_to_output
 
-    def __call__(self, command, output, log_filepath=None, cwd=None):
+    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):
         """
         @param command: Command to execute
         @param output: Instead of print to sys.stdout print to that stream. Could be None
         @param log_filepath: If specified, also log to a file
         @param cwd: Move to directory to execute
         """
+        if output and isinstance(output, io.StringIO) and six.PY2:
+            # in py2 writing to a StringIO requires unicode, otherwise it fails
+            print("*** WARN: Invalid output parameter of type io.StringIO(), "
+                  "use six.StringIO() instead ***")
+
         stream_output = output if output and hasattr(output, "write") else sys.stdout
 
         if not self._generate_run_log_file:
@@ -30,23 +38,27 @@ class ConanRunner(object):
         if self._print_commands_to_output and stream_output and self._log_run_to_output:
             stream_output.write(call_message)
 
-        # No output has to be redirected to logs or buffer or omitted
-        if output is True and not log_filepath and self._log_run_to_output:
-            return self._simple_os_call(command, cwd)
-        elif log_filepath:
-            if stream_output:
-                stream_output.write("Logging command output to file '%s'\n" % log_filepath)
-            with open(log_filepath, "a+") as log_handler:
-                if self._print_commands_to_output:
-                    log_handler.write(call_message)
-                return self._pipe_os_call(command, stream_output, log_handler, cwd)
-        else:
-            return self._pipe_os_call(command, stream_output, None, cwd)
+        with pyinstaller_bundle_env_cleaned():
+            # No output has to be redirected to logs or buffer or omitted
+            if output is True and not log_filepath and self._log_run_to_output and not subprocess:
+                return self._simple_os_call(command, cwd)
+            elif log_filepath:
+                if stream_output:
+                    stream_output.write("Logging command output to file '%s'\n" % log_filepath)
+                with open(log_filepath, "a+") as log_handler:
+                    if self._print_commands_to_output:
+                        log_handler.write(call_message)
+                    return self._pipe_os_call(command, stream_output, log_handler, cwd)
+            else:
+                return self._pipe_os_call(command, stream_output, None, cwd)
 
     def _pipe_os_call(self, command, stream_output, log_handler, cwd):
 
         try:
-            proc = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd)
+            # piping both stdout, stderr and then later only reading one will hang the process
+            # if the other fills the pip. So piping stdout, and redirecting stderr to stdour,
+            # so both are merged and use just a single get_stream_lines() call
+            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -59,7 +71,7 @@ class ConanRunner(object):
                 if stream_output and self._log_run_to_output:
                     try:
                         stream_output.write(decoded_line)
-                    except UnicodeEncodeError:  # be agressive on text encoding
+                    except UnicodeEncodeError:  # be aggressive on text encoding
                         decoded_line = decoded_line.encode("latin-1", "ignore").decode("latin-1",
                                                                                        "ignore")
                         stream_output.write(decoded_line)
@@ -70,7 +82,7 @@ class ConanRunner(object):
                     log_handler.write(line if six.PY2 else decoded_line)
 
         get_stream_lines(proc.stdout)
-        get_stream_lines(proc.stderr)
+        # get_stream_lines(proc.stderr)
 
         proc.communicate()
         ret = proc.returncode
@@ -81,7 +93,7 @@ class ConanRunner(object):
             return os.system(command)
         else:
             try:
-                old_dir = os.getcwd()
+                old_dir = get_cwd()
                 os.chdir(cwd)
                 result = os.system(command)
             except Exception as e:
@@ -90,3 +102,27 @@ class ConanRunner(object):
             finally:
                 os.chdir(old_dir)
             return result
+
+
+if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
+
+    # http://pyinstaller.readthedocs.io/en/stable/runtime-information.html#ld-library-path-libpath-considerations
+    pyinstaller_bundle_dir = os.environ['LD_LIBRARY_PATH'].replace(
+        os.environ.get('LD_LIBRARY_PATH_ORIG', ''), ''
+    ).strip(';:')
+
+    @contextmanager
+    def pyinstaller_bundle_env_cleaned():
+        """Removes the pyinstaller bundle directory from LD_LIBRARY_PATH
+
+        :return: None
+        """
+        ld_library_path = os.environ['LD_LIBRARY_PATH']
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir, '').strip(';:')
+        yield
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path
+
+else:
+    @contextmanager
+    def pyinstaller_bundle_env_cleaned():
+        yield

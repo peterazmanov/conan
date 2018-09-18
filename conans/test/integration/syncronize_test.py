@@ -6,7 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load, save
 from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
-from conans.paths import EXPORT_TGZ_NAME, CONAN_MANIFEST, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.tools import untargz
 from conans.model.manifest import FileTreeManifest
 
@@ -29,7 +29,7 @@ class SynchronizeTest(unittest.TestCase):
         server_conan_path = remote_paths.export(conan_reference)
 
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         # Upload conan file
         self.client.run("upload %s" % str(conan_reference))
@@ -43,7 +43,7 @@ class SynchronizeTest(unittest.TestCase):
 
         # Now delete local files export and upload and check that they are not in server
         os.remove(os.path.join(self.client.current_folder, "to_be_deleted.txt"))
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
@@ -56,7 +56,7 @@ class SynchronizeTest(unittest.TestCase):
         files["new_file.lib"] = "new file"
         del files["to_be_deleted.txt"]
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
 
         # Verify all is correct
@@ -117,6 +117,5 @@ class SynchronizeTest(unittest.TestCase):
     def _create_manifest(self, package_reference):
         # Create the manifest to be able to upload the package
         pack_path = self.client.paths.package(package_reference)
-        digest_path = self.client.client_cache.digestfile_package(package_reference)
-        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
-        save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
+        expected_manifest = FileTreeManifest.create(pack_path)
+        expected_manifest.save(pack_path)

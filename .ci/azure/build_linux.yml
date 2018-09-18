@@ -1,0 +1,25 @@
+# File: jobs/build.yml
+
+parameters:
+  pyver: ''
+
+jobs:
+- job: ${{ format('Linux{0}', parameters.pyver) }}
+  timeoutInMinutes: 0
+  cancelTimeoutInMinutes: 0
+  variables:
+    pyver: ${{ parameters.pyver }}
+  pool:
+    vmImage: 'ubuntu-16.04'
+  container: conan_tests
+  steps:
+  - script: |
+      python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
+      cat $(sourcedir)/setup.json
+      cat $(sourcedir)/tests.json
+    displayName: Regular tests
+    env:
+      CONAN_RECIPE_LINTER: 'False'
+      CONAN_TEST_FOLDER: $(workdir)
+  - script: python $(runner) conans.test.remote.rest_api_test $(pyver) $(workdir) /tmp
+    displayName: REST API tests

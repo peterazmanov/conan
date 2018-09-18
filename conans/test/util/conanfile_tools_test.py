@@ -1,13 +1,12 @@
 import unittest
 import os
 from conans.util.files import save, load
-from conans.client.loader import ConanFileLoader
-from conans.model.settings import Settings
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.test.utils.test_files import temp_folder
 from conans import tools
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
-from conans.model.profile import Profile
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 base_conanfile = '''
@@ -22,6 +21,21 @@ class ConanFileToolsTest(ConanFile):
 
 
 class ConanfileToolsTest(unittest.TestCase):
+
+    def save_append_test(self):
+        # https://github.com/conan-io/conan/issues/2841 (regression)
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+from conans.tools import save
+class Pkg(ConanFile):
+    def source(self):
+        save("myfile.txt", "Hello", append=True)
+"""
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "World"})
+        client.run("source .")
+        self.assertEqual("WorldHello",
+                         load(os.path.join(client.current_folder, "myfile.txt")))
 
     def test_untar(self):
         tmp_dir = temp_folder()
@@ -115,7 +129,7 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create user/testing")
+        client.run("create . user/testing")
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
@@ -129,7 +143,7 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": file_content})
-        client.run("install")
+        client.run("install .")
         error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)
@@ -146,8 +160,8 @@ class ConanfileToolsTest(unittest.TestCase):
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, Settings(), Profile())
-        ret = loader.load_conan(file_path, None)
+        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
+        ret = loader.load_conanfile(file_path, None, ProcessedProfile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

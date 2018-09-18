@@ -1,0 +1,42 @@
+# File: jobs/build.yml
+
+parameters:
+  pyver: ''
+
+jobs:
+- job: ${{ format('Windows{0}', parameters.pyver) }}
+  timeoutInMinutes: 0
+  cancelTimeoutInMinutes: 0
+  variables:
+    pyver: ${{ parameters.pyver }}
+    num_cores: 8
+    cmake_version: cmake-3.7.2-win32-x86
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      ${{ if eq(parameters.pyver, 'py36') }}:
+        versionSpec: '3.6'
+      ${{ if eq(parameters.pyver, 'py34') }}:
+        versionSpec: '3.4'
+      ${{ if eq(parameters.pyver, 'py27') }}:
+        versionSpec: '2.7'
+      addToPath: true
+  - script: pip install virtualenv
+  - script: python --version
+    displayName: Show python version
+  - powershell: (new-object System.Net.WebClient).DownloadFile('https://cmake.org/files/v3.7/$(cmake_version).zip','cmake.zip')
+  - task: ExtractFiles@1
+    inputs:
+      archiveFilePatterns: 'cmake.zip'
+      destinationFolder: '_cmake'
+  - script: |
+      set PATH=$(sourcedir)\_cmake\$(cmake_version)\bin;%PATH%
+      python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor) && type $(sourcedir)/tests.json
+    displayName: Regular tests
+    env:
+      CONAN_RECIPE_LINTER: 'False'
+      CONAN_TEST_FOLDER: $(workdir)
+  - script: python $(runner) conans.test.remote.rest_api_test $(pyver) $(workdir) .
+    displayName: REST API tests

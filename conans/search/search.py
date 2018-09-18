@@ -1,6 +1,6 @@
 import re
+import os
 
-from abc import ABCMeta, abstractmethod
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
@@ -8,59 +8,8 @@ from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.log import logger
-import os
 from conans.search.query_parse import infix_to_postfix, evaluate_postfix
-
-
-class SearchAdapterABC(object):
-    """Methods that allows access to disk or s3 or whatever to make a search"""
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def list_folder_subdirs(self, basedir, level):
-        pass
-
-    @abstractmethod
-    def path_exists(self, path):
-        pass
-
-    @abstractmethod
-    def load(self, filepath):
-        pass
-
-    @abstractmethod
-    def join_paths(self, *args):
-        pass
-
-
-class DiskSearchAdapter(SearchAdapterABC):
-
-    def list_folder_subdirs(self, basedir, level):
-        from conans.util.files import list_folder_subdirs
-        return list_folder_subdirs(basedir, level)
-
-    def path_exists(self, path):
-        return os.path.exists(path)
-
-    def load(self, filepath):
-        from conans.util.files import load
-        return load(filepath)
-
-    def join_paths(self, *args):
-        return os.path.join(*args)
-
-
-class SearchManagerABC(object):
-    """Methods that allows access to disk or s3 or whatever to make a search"""
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def search(self, pattern=None, ignorecase=True):
-        pass
-
-    @abstractmethod
-    def search_packages(self, reference, query):
-        pass
+from conans.util.files import list_folder_subdirs, load
 
 
 def filter_outdated(packages_infos, recipe_hash):
@@ -112,7 +61,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     """
 
     def compatible_prop(setting_value, prop_value):
-        return setting_value is None or prop_value == setting_value
+        return (prop_value == setting_value) or (prop_value == "None" and setting_value is None)
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
@@ -124,66 +73,74 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     return False
 
 
-class DiskSearchManager(SearchManagerABC):
-    """Will search recipes and packages using a file system.
-    Can be used with a SearchAdapter"""
+def search_recipes(paths, pattern=None, ignorecase=True):
+    # Conan references in main storage
+    if pattern:
+        if isinstance(pattern, ConanFileReference):
+            pattern = str(pattern)
+        pattern = translate(pattern)
+        pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-    def __init__(self, paths, disk_search_adapter):
-        self._paths = paths
-        self._adapter = disk_search_adapter
+    subdirs = list_folder_subdirs(basedir=paths.store, level=4)
+    if not pattern:
+        return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
+    else:
+        ret = []
+        for subdir in subdirs:
+            conan_ref = ConanFileReference(*subdir.split("/"))
+            if _partial_match(pattern, conan_ref):
+                ret.append(conan_ref)
 
-    def search(self, pattern=None, ignorecase=True):
+        return sorted(ret)
 
-        # Conan references in main storage
-        if pattern:
-            if isinstance(pattern, ConanFileReference):
-                pattern = str(pattern)
-            pattern = translate(pattern)
-            pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-        subdirs = self._adapter.list_folder_subdirs(basedir=self._paths.store, level=4)
-        if not pattern:
-            return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
-        else:
-            ret = []
-            for subdir in subdirs:
-                conan_ref = ConanFileReference(*subdir.split("/"))
-                if pattern:
-                    if pattern.match(str(conan_ref)):
-                        ret.append(conan_ref)
-            return sorted(ret)
+def _partial_match(pattern, conan_ref):
+    """
+    Finds if pattern matches any of partial sums of tokens of conan reference
+    """
+    tokens = str(conan_ref).replace('/', ' / ').replace('@', ' @ ').split()
 
-    def search_packages(self, reference, query):
-        """ Return a dict like this:
+    def partial_sums(iterable):
+        partial = ''
+        for i in iterable:
+            partial += i
+            yield partial
 
-                {package_ID: {name: "OpenCV",
-                               version: "2.14",
-                               settings: {os: Windows}}}
-        param conan_ref: ConanFileReference object
-        """
-        infos = self._get_local_infos_min(reference)
-        return filter_packages(query, infos)
+    return any(map(pattern.match, list(partial_sums(tokens))))
 
-    def _get_local_infos_min(self, reference):
-        result = {}
-        packages_path = self._paths.packages(reference)
-        subdirs = self._adapter.list_folder_subdirs(packages_path, level=1)
-        for package_id in subdirs:
-            # Read conaninfo
-            try:
-                package_reference = PackageReference(reference, package_id)
-                info_path = self._adapter.join_paths(self._paths.package(package_reference,
-                                                                         short_paths=None),
-                                                     CONANINFO)
-                if not self._adapter.path_exists(info_path):
-                    raise NotFoundException("")
-                conan_info_content = self._adapter.load(info_path)
-                conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
-                result[package_id] = conan_vars_info
 
-            except Exception as exc:
-                logger.error("Package %s has no ConanInfo file" % str(package_reference))
-                if str(exc):
-                    logger.error(str(exc))
+def search_packages(paths, reference, query):
+    """ Return a dict like this:
 
-        return result
+            {package_ID: {name: "OpenCV",
+                           version: "2.14",
+                           settings: {os: Windows}}}
+    param conan_ref: ConanFileReference object
+    """
+    if not os.path.exists(paths.conan(reference)):
+        raise NotFoundException("Recipe not found: %s" % str(reference))
+    infos = _get_local_infos_min(paths, reference)
+    return filter_packages(query, infos)
+
+
+def _get_local_infos_min(paths, reference):
+    result = {}
+    packages_path = paths.packages(reference)
+    subdirs = list_folder_subdirs(packages_path, level=1)
+    for package_id in subdirs:
+        # Read conaninfo
+        try:
+            package_reference = PackageReference(reference, package_id)
+            info_path = os.path.join(paths.package(package_reference,
+                                                   short_paths=None), CONANINFO)
+            if not os.path.exists(info_path):
+                raise NotFoundException("")
+            conan_info_content = load(info_path)
+            conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
+            result[package_id] = conan_vars_info
+
+        except Exception as exc:
+            logger.error("Package %s has no ConanInfo file" % str(package_reference))
+            if str(exc):
+                logger.error(str(exc))
+    return result

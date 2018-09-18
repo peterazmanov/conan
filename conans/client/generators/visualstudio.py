@@ -1,5 +1,8 @@
+import os
+
 from conans.model import Generator
 from conans.paths import BUILD_INFO_VISUAL_STUDIO
+import re
 
 
 class VisualStudioGenerator(Generator):
@@ -34,6 +37,8 @@ class VisualStudioGenerator(Generator):
     </Midl>
     <ResourceCompile>
       <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>{definitions}%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>{compiler_flags} %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
@@ -46,7 +51,7 @@ class VisualStudioGenerator(Generator):
         sections = []
         for dep_name, cpp_info in self.deps_build_info.dependencies:
             fields = {
-                'root_dir': cpp_info.rootpath,
+                'root_dir': cpp_info.rootpath.replace("\\", "/"),
                 'name': dep_name.replace(".", "-")
             }
             section = self.item_template.format(**fields)
@@ -73,4 +78,9 @@ class VisualStudioGenerator(Generator):
             'linker_flags': " ".join(self._deps_build_info.sharedlinkflags),
             'exe_flags': " ".join(self._deps_build_info.exelinkflags)
         }
-        return self.template.format(**fields)
+        formatted_template = self.template.format(**fields)
+        userprofile = os.getenv("USERPROFILE")
+        if userprofile:
+            userprofile = userprofile.replace("\\", "/")
+            formatted_template = re.sub(userprofile, "$(USERPROFILE)", formatted_template, flags=re.I)
+        return formatted_template

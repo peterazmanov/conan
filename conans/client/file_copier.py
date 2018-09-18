@@ -3,21 +3,26 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
-from conans import tools
+from conans.util.files import mkdir
 
 
-def report_copied_files(copied, output, warn=False):
+def report_copied_files(copied, output):
     ext_files = defaultdict(list)
     for f in copied:
         _, ext = os.path.splitext(f)
         ext_files[ext].append(os.path.basename(f))
 
-    for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
-        output.info("Copied %d '%s' files%s" % (len(files), ext, files_str))
+    if not ext_files:
+        return False
 
-    if warn and not ext_files:
-        output.warn("No files copied!")
+    for ext, files in ext_files.items():
+        files_str = (", ".join(files)) if len(files) < 5 else ""
+        file_or_files = "file" if len(files) == 1 else "files"
+        if not ext:
+            output.info("Copied %d %s: %s" % (len(files), file_or_files, files_str))
+        else:
+            output.info("Copied %d '%s' %s: %s" % (len(files), ext, file_or_files, files_str))
+    return True
 
 
 class FileCopier(object):
@@ -42,8 +47,8 @@ class FileCopier(object):
         if excluded:
             self._excluded.append(excluded)
 
-    def report(self, output, warn=False):
-        report_copied_files(self._copied, output, warn)
+    def report(self, output):
+        return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
                  excludes=None, ignore_case=False):
@@ -86,6 +91,14 @@ class FileCopier(object):
         """
         filenames = []
         linked_folders = []
+        if excludes:
+            if not isinstance(excludes, (tuple, list)):
+                excludes = (excludes, )
+            if ignore_case:
+                excludes = [e.lower() for e in excludes]
+        else:
+            excludes = []
+
         for root, subfolders, files in os.walk(src, followlinks=True):
             if root in self._excluded:
                 subfolders[:] = []
@@ -107,6 +120,11 @@ class FileCopier(object):
                     pass
 
             relative_path = os.path.relpath(root, src)
+            for exclude in excludes:
+                if fnmatch.fnmatch(relative_path, exclude):
+                    subfolders[:] = []
+                    files = []
+                    break
             for f in files:
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
@@ -116,13 +134,8 @@ class FileCopier(object):
             pattern = pattern.lower()
 
         files_to_copy = fnmatch.filter(filenames, pattern)
-        if excludes:
-            if not isinstance(excludes, (tuple, list)):
-                excludes = (excludes, )
-            if ignore_case:
-                excludes = [e.lower() for e in excludes]
-            for exclude in excludes:
-                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+        for exclude in excludes:
+            files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
 
         if ignore_case:
             files_to_copy = [filenames[f] for f in files_to_copy]
@@ -131,20 +144,43 @@ class FileCopier(object):
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
+        created_links = []
         for linked_folder in linked_folders:
-            link = os.readlink(os.path.join(src, linked_folder))
-            # The link is relative to the directory of the "linker_folder"
-            dest_dir = os.path.join(os.path.dirname(linked_folder), link)
-            if os.path.exists(os.path.join(dst, dest_dir)):
-                with tools.chdir(dst):
-                    try:
-                        # Remove the previous symlink
-                        os.remove(linked_folder)
+            src_link = os.path.join(src, linked_folder)
+            # Discard symlinks that go out of the src folder
+            abs_path = os.path.realpath(src_link)
+            relpath = os.path.relpath(abs_path, src)
+            if relpath.startswith("."):
+                continue
+            
+            link = os.readlink(src_link)
+            # Absoluted path symlinks are a problem, convert it to relative
+            if os.path.isabs(link):
+                link = os.path.relpath(link, os.path.dirname(src_link))
+
+            dst_link = os.path.join(dst, linked_folder)
+            try:
+                # Remove the previous symlink
+                os.remove(dst_link)
+            except OSError:
+                pass
+            # link is a string relative to linked_folder
+            # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
+            mkdir(os.path.dirname(dst_link))
+            os.symlink(link, dst_link)
+            created_links.append(dst_link)
+        # Remove empty links
+        for dst_link in created_links:
+            abs_path = os.path.realpath(dst_link)
+            if not os.path.exists(abs_path):
+                base_path = os.path.dirname(dst_link)
+                os.remove(dst_link)
+                while base_path.startswith(dst):
+                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
+                        os.rmdir(base_path)
                     except OSError:
-                        pass
-                    # link is a string relative to linked_folder
-                    # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
-                    os.symlink(link, linked_folder)
+                        break  # not empty
+                    base_path = os.path.dirname(base_path)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):

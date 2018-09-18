@@ -70,7 +70,7 @@ class Requirements(OrderedDict):
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be
         properly defined. This is not a deep-copy, in fact, requirements in the dict
-        are changed by RequireResolver, and are propagated upstream
+        are changed by RangeResolver, and are propagated upstream
         """
         result = Requirements()
         for name, req in self.items():
@@ -120,7 +120,7 @@ class Requirements(OrderedDict):
                 # update dependency
                 other_ref = other_req.conan_reference
                 if other_ref and other_ref != req.conan_reference:
-                    output.info("%s requirement %s overriden by %s to %s "
+                    output.info("%s requirement %s overridden by %s to %s "
                                 % (own_ref, req.conan_reference, down_ref or "your conanfile",
                                    other_ref))
                     req.conan_reference = other_ref

@@ -47,7 +47,7 @@ class HelloConan(ConanFile):
             files[CONANFILE] = base
             client.save(files)
             client.run("user lasote -p mypass -r default")
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(conan_reference))
             package_dir = client.client_cache.packages(ConanFileReference.loads("Hello0/0.1@lasote/stable"))
             package_dir = os.path.join(package_dir, os.listdir(package_dir)[0])
@@ -55,21 +55,21 @@ class HelloConan(ConanFile):
             return log_file_packaged, client.user_io.out
 
         log_file_packaged, output = _install_a_package(False, True)
-        self.assertIn("Copied 1 '.log' files: conan_run.log", output)
+        self.assertIn("Copied 1 '.log' file: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
         self.assertNotIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(True, True)
-        self.assertIn("Copied 1 '.log' files: conan_run.log", output)
+        self.assertIn("Copied 1 '.log' file: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
         self.assertIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(False, False)
-        self.assertNotIn("Copied 1 '.log' files: conan_run.log", output)
+        self.assertNotIn("Copied 1 '.log' file: conan_run.log", output)
         self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
@@ -82,7 +82,7 @@ class HelloConan(ConanFile):
             files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
             client.save(files)
             client.run("user lasote -p mypass -r default")
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(conan_reference))
             client.run("upload %s --all" % str(conan_reference))
 
@@ -92,21 +92,21 @@ class HelloConan(ConanFile):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        self.assertEquals(len(actions), 19)
+        self.assertTrue(len(actions) in [20, 16])  # APIv1 vs APIv2
         for trace in actions:
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
 
         self.assertEquals(json.loads(actions[0])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[0])["name"], "user")
-
-        self.assertEquals(json.loads(actions[2])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[2])["name"], "export")
+        self.assertEquals(json.loads(actions[0])["name"], "authenticate")
 
         self.assertEquals(json.loads(actions[3])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[3])["name"], "install_reference")
+        self.assertEquals(json.loads(actions[3])["name"], "export")
 
-        self.assertEquals(json.loads(actions[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEquals(json.loads(actions[4])["_id"], "Hello0/0.1@lasote/stable")
+        self.assertEquals(json.loads(actions[4])["_action"], "COMMAND")
+        self.assertEquals(json.loads(actions[4])["name"], "install_reference")
+
+        self.assertEquals(json.loads(actions[5])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
+        self.assertEquals(json.loads(actions[5])["_id"], "Hello0/0.1@lasote/stable")
 
         self.assertEquals(json.loads(actions[-1])["_action"], "UPLOADED_PACKAGE")

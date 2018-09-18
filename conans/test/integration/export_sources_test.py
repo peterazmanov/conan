@@ -1,9 +1,11 @@
 import unittest
+
+from conans import tools
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SRC_FOLDER
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 from conans.util.files import load, save, md5sum
 from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict
@@ -166,12 +168,7 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports.append("license.txt")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
-        if reuploaded and mode == "exports":
-            # In this mode, we know the sources are not required
-            # So the local folder is created, but empty
-            self.assertTrue(os.path.exists(self.export_sources_folder))
-        else:
-            self.assertFalse(os.path.exists(self.export_sources_folder))
+        self.assertFalse(os.path.exists(self.export_sources_folder))
 
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
@@ -203,6 +200,7 @@ class ExportsSourcesTest(unittest.TestCase):
         manifest = load(os.path.join(self.client.current_folder,
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
+
         if mode == "exports_sources":
             self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
@@ -256,7 +254,7 @@ class ExportsSourcesTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -280,7 +278,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self._check_export_folder(mode)
 
         # now build package
@@ -328,7 +326,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_upload_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
 
         self.client.run("upload Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
@@ -359,7 +357,7 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -379,7 +377,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def update_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -392,11 +390,36 @@ class ExportsSourcesTest(unittest.TestCase):
 
         server_path = self.server.paths.export(self.reference)
         save(os.path.join(server_path, "license.txt"), "mylicense")
-        manifest_path = os.path.join(server_path, "conanmanifest.txt")
-        manifest = FileTreeManifest.loads(load(manifest_path))
+        manifest = FileTreeManifest.load(server_path)
         manifest.time += 1
         manifest.file_sums["license.txt"] = md5sum(os.path.join(server_path, "license.txt"))
-        save(manifest_path, str(manifest))
+        manifest.save(server_path)
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)
+
+    def exports_sources_old_c_src_test(self):
+        conanfile = """
+import os
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    exports_sources = "*"
+
+    def build(self):
+        # won't be run in create but in the install from remote, we are emulating old .c_src
+        # in the package
+        if not os.environ.get("SKIP_THIS"):
+            # This dir has to exists after the install
+            assert(os.path.exists("modules/Hello/projects/Hello/myfile.txt"))
+
+"""
+        # Fake old package layout with .c_src
+        self.client.save({"conanfile.py": conanfile,
+                          ".c_src/modules/Hello/projects/Hello/myfile.txt": "contents"})
+        with tools.environment_append({"SKIP_THIS": "1"}):
+            self.client.run("create . Hello/0.1@lasote/channel")
+        self.client.run("upload Hello/0.1@lasote/channel --all")
+
+        self.client.run('remove "*" -f')
+        self.client.run("install Hello/0.1@lasote/channel --build")

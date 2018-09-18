@@ -1,23 +1,27 @@
 import platform
 import logging
-import re
 import os
 import sys
 
 from contextlib import contextmanager
+from fnmatch import fnmatch
 from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import load, save, _generic_algorithm_sum
+from conans.util.files import (load, save, _generic_algorithm_sum)
+from conans.unicode import get_cwd
+import six
 
 
 _global_output = None
 
+UNIT_SIZE = 1000.0
+
 
 @contextmanager
 def chdir(newdir):
-    old_path = os.getcwd()
+    old_path = get_cwd()
     os.chdir(newdir)
     try:
         yield
@@ -36,9 +40,9 @@ def human_size(size_bytes):
 
     num = float(size_bytes)
     for suffix, precision in suffixes_table:
-        if num < 1024.0:
+        if num < UNIT_SIZE:
             break
-        num /= 1024.0
+        num /= UNIT_SIZE
 
     if precision == 0:
         formatted_size = "%d" % num
@@ -48,22 +52,30 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
     :param destination: Destination folder
-    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the zip was not created in a NIX
-    system, the bits could produce undefined permission schema. Use only this option if you are sure that the
-    zip was created correctly.
+    :param keep_permissions: Keep the zip permissions. WARNING: Can be
+    dangerous if the zip was not created in a NIX system, the bits could
+    produce undefined permission schema. Use this option only if you are sure
+    that the zip was created correctly.
+    :param pattern: Extract only paths matching the pattern. This should be a
+    Unix shell-style wildcard, see fnmatch documentation for more details.
     :return:
     """
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination)
+        return untargz(filename, destination, pattern)
+    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
+        if six.PY2:
+            raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
+        return untargz(filename, destination, pattern)
+
     import zipfile
-    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+    full_path = os.path.normpath(os.path.join(get_cwd(), destination))
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
@@ -77,7 +89,11 @@ def unzip(filename, destination=".", keep_permissions=False):
             pass
 
     with zipfile.ZipFile(filename, "r") as z:
-        uncompress_size = sum((file_.file_size for file_ in z.infolist()))
+        if not pattern:
+            zip_info = z.infolist()
+        else:
+            zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
+        uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
             _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
         else:
@@ -86,7 +102,7 @@ def unzip(filename, destination=".", keep_permissions=False):
 
         print_progress.last_size = -1
         if platform.system() == "Windows":
-            for file_ in z.infolist():
+            for file_ in zip_info:
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
@@ -94,7 +110,7 @@ def unzip(filename, destination=".", keep_permissions=False):
                 except Exception as e:
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
         else:  # duplicated for, to avoid a platform check for each zipped file
-            for file_ in z.infolist():
+            for file_ in zip_info:
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
@@ -108,10 +124,15 @@ def unzip(filename, destination=".", keep_permissions=False):
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
-def untargz(filename, destination="."):
+def untargz(filename, destination=".", pattern=None):
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        tarredgzippedFile.extractall(destination)
+        if not pattern:
+            tarredgzippedFile.extractall(destination)
+        else:
+            members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                  tarredgzippedFile.getmembers()))
+            tarredgzippedFile.extractall(destination, members=members)
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
@@ -221,11 +242,13 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
     save(pc_file, "\n".join(lines))
 
 
-def unix_path(path):
-    """"Used to translate windows paths to MSYS unix paths like
-    c/users/path/to/file. Not working in a regular console or MinGW!"""
-    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
-    return pattern.sub('/\\1/', path).replace('\\', '/').lower()
+def _path_equals(path1, path2):
+    path1 = os.path.normpath(path1)
+    path2 = os.path.normpath(path2)
+    if platform.system() == "Windows":
+        path1 = path1.lower().replace("sysnative", "system32")
+        path2 = path2.lower().replace("sysnative", "system32")
+    return path1 == path2
 
 
 def collect_libs(conanfile, folder="lib"):
@@ -248,8 +271,45 @@ def collect_libs(conanfile, folder="lib"):
 
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
-    for path in os.environ["PATH"].split(os.pathsep):
-        fullname = os.path.join(path, filename)
-        if os.path.exists(fullname) and os.access(fullname, os.X_OK):
+    def verify(filepath):
+        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
             return os.path.join(path, filename)
+        return None
+
+    def _get_possible_filenames(filename):
+        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if "." not in filename else []
+        extensions = [".sh"] if platform.system() != "Windows" else extensions_win
+        extensions.insert(1, "")  # No extension
+        return ["%s%s" % (filename, entry.lower()) for entry in extensions]
+
+    possible_names = _get_possible_filenames(filename)
+    for path in os.environ["PATH"].split(os.pathsep):
+        for name in possible_names:
+            filepath = os.path.abspath(os.path.join(path, name))
+            if verify(filepath):
+                return filepath
+            if platform.system() == "Windows":
+                filepath = filepath.lower()
+                if "system32" in filepath:
+                    # python return False for os.path.exists of exes in System32 but with SysNative
+                    trick_path = filepath.replace("system32", "sysnative")
+                    if verify(trick_path):
+                        return trick_path
+
     return None
+
+
+def _replace_with_separator(filepath, sep):
+    tmp = load(filepath)
+    ret = sep.join(tmp.splitlines())
+    if tmp.endswith("\n"):
+        ret += sep
+    save(filepath, ret)
+
+
+def unix2dos(filepath):
+    _replace_with_separator(filepath, "\r\n")
+
+
+def dos2unix(filepath):
+    _replace_with_separator(filepath, "\n")

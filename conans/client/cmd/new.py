@@ -21,19 +21,22 @@ class {package_name}Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/memsharded/hello.git")
         self.run("cd hello && git checkout static_shared")
-        # This small hack might be useful to guarantee proper /MT /MD linkage in MSVC
-        # if the packaged project doesn't have variables to set it properly
-        tools.replace_in_file("hello/CMakeLists.txt", "PROJECT(MyHello)", '''PROJECT(MyHello)
+        # This small hack might be useful to guarantee proper /MT /MD linkage
+        # in MSVC if the packaged project doesn't have variables to set it
+        # properly
+        tools.replace_in_file("hello/CMakeLists.txt", "PROJECT(MyHello)",
+                              '''PROJECT(MyHello)
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/hello" % self.source_folder)
+        cmake.configure(source_folder="hello")
         cmake.build()
 
         # Explicit way:
-        # self.run('cmake %s/hello %s' % (self.source_folder, cmake.command_line))
+        # self.run('cmake %s/hello %s'
+        #          % (self.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -46,10 +49,11 @@ conan_basic_setup()''')
 
     def package_info(self):
         self.cpp_info.libs = ["hello"]
+
 """
 
-conanfile_bare = """from conans import ConanFile
-from conans import tools
+conanfile_bare = """from conans import ConanFile, tools
+
 
 class {package_name}Conan(ConanFile):
     name = "{name}"
@@ -83,11 +87,12 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/src" % self.source_folder)
+        cmake.configure(source_folder="src")
         cmake.build()
 
         # Explicit way:
-        # self.run('cmake %s/src %s' % (self.source_folder, cmake.command_line))
+        # self.run('cmake %s/hello %s'
+        #          % (self.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -102,8 +107,9 @@ class {package_name}Conan(ConanFile):
         self.cpp_info.libs = ["hello"]
 """
 
-conanfile_header = """from conans import ConanFile, tools
-import os
+conanfile_header = """import os
+
+from conans import ConanFile, tools
 
 
 class {package_name}Conan(ConanFile):
@@ -112,23 +118,27 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    no_copy_source = True
     # No settings/options are necessary, this is header only
 
     def source(self):
-        '''retrieval of the source code here. Remember you can also put the code in the folder and
-        use exports instead of retrieving it with this source() method
+        '''retrieval of the source code here. Remember you can also put the code
+        in the folder and use exports instead of retrieving it with this
+        source() method
         '''
-        #self.run("git clone ...") or
-        #tools.download("url", "file.zip")
-        #tools.unzip("file.zip" )
+        # self.run("git clone ...") or
+        # tools.download("url", "file.zip")
+        # tools.unzip("file.zip" )
 
     def package(self):
         self.copy("*.h", "include")
 """
 
 
-test_conanfile = """from conans import ConanFile, CMake
-import os
+test_conanfile = """import os
+
+from conans import ConanFile, CMake, tools
+
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -136,8 +146,9 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is in "test_package"
-        cmake.configure(source_dir=self.conanfile_directory, build_dir="./")
+        # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is
+        # in "test_package"
+        cmake.configure()
         cmake.build()
 
     def imports(self):
@@ -146,12 +157,13 @@ class {package_name}TestConan(ConanFile):
         self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
-        os.chdir("bin")
-        self.run(".%sexample" % os.sep)
+        if not tools.cross_building(self.settings):
+            os.chdir("bin")
+            self.run(".%sexample" % os.sep)
 """
 
-test_cmake = """project(PackageTest CXX)
-cmake_minimum_required(VERSION 2.8.12)
+test_cmake = """cmake_minimum_required(VERSION 2.8.12)
+project(PackageTest CXX)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -197,8 +209,8 @@ void hello(){
 }
 """
 
-cmake = """project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8)
+cmake = """cmake_minimum_required(VERSION 2.8)
+project(MyHello CXX)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -215,7 +227,8 @@ test_package/build
 
 def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
+            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None,
+            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -228,7 +241,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         package_name = pattern.sub('', name).capitalize()
     except ValueError:
         raise ConanException("Bad parameter, please use full package name,"
-                             "e.g: MyLib/1.2.3@user/testing")
+                             "e.g.: MyLib/1.2.3@user/testing")
 
     # Validate it is a valid reference
     ConanFileReference(name, version, user, channel)
@@ -256,7 +269,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}
         if pure_c:
-            config = "\n    def configure(self):\n        del self.settings.compiler.libcxx"
+            config = "    def configure(self):\n        del self.settings.compiler.libcxx\n"
             files["conanfile.py"] = files["conanfile.py"] + config
 
     if test:
@@ -272,5 +285,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     files.update(ci_get_files(name, version, user, channel, visual_versions,
                               linux_gcc_versions, linux_clang_versions,
                               osx_clang_versions, shared, upload_url,
-                              gitlab_gcc_versions, gitlab_clang_versions))
+                              gitlab_gcc_versions, gitlab_clang_versions,
+                              circleci_gcc_versions, circleci_clang_versions,
+                              circleci_osx_versions))
     return files

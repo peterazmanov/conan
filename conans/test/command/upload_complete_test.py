@@ -1,3 +1,4 @@
+import json
 import unittest
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.test.utils.test_files import hello_source_files, temp_folder,\
@@ -7,7 +8,7 @@ import os
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 import platform
 import stat
-from conans.util.files import save, mkdir
+from conans.util.files import load, mkdir, save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
@@ -78,11 +79,11 @@ class UploadTest(unittest.TestCase):
         files = hello_source_files()
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: myconan1,
-                          CONAN_MANIFEST: str(conan_digest),
                           "include/math/lib1.h": "//copy",
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
+        conan_digest.save(reg_folder)
         mkdir(self.client.client_cache.export_sources(self.conan_ref))
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
@@ -101,9 +102,9 @@ class UploadTest(unittest.TestCase):
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
                  stat.S_IRWXU)
 
-        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
-        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
-        save(os.path.join(package_folder, CONAN_MANIFEST), str(expected_manifest))
+        package_path = self.client.client_cache.package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(package_path)
+        expected_manifest.save(package_folder)
 
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
@@ -112,7 +113,7 @@ class UploadTest(unittest.TestCase):
     def try_upload_bad_recipe_test(self):
         files = hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         os.unlink(os.path.join(self.client.client_cache.export(ref), CONAN_MANIFEST))
         with self.assertRaisesRegexp(Exception, "Command failed"):
@@ -124,7 +125,7 @@ class UploadTest(unittest.TestCase):
         for num in range(5):
             files = hello_conan_files("Hello%s" % num, "1.2.1")
             self.client.save(files)
-            self.client.run("export frodo/stable")
+            self.client.run("export . frodo/stable")
 
         self.client.run("upload Hello* --confirm")
         for num in range(5):
@@ -146,8 +147,8 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
-        client.run("upload Hello* --confirm --retry_wait=0")
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm --retry-wait=0")
         self.assertIn("Can't connect because of the evil mock", client.user_io.out)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
 
@@ -155,8 +156,8 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
-        client.run("upload Hello* --confirm --retry 1 --retry_wait=1", ignore_error=True)
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm --retry 1 --retry-wait=1", ignore_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
                       "conanmanifest.txt. [Remote: default]", client.user_io.out)
@@ -165,8 +166,8 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(TerribleConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
-        client.run("upload Hello* --confirm --retry 10 --retry_wait=0", ignore_error=True)
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm --retry 10 --retry-wait=0", ignore_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.user_io.out)
 
@@ -174,15 +175,15 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(FailPairFilesUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
+        client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
-        client.run("upload Hello* --confirm --retry 3 --retry_wait=0 --all")
+        client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEquals(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
 
         self.client.run("upload Hello* --confirm -p 234234234", ignore_error=True)
         self.assertIn("-p parameter only allowed with a valid recipe reference",
@@ -192,7 +193,7 @@ class UploadTest(unittest.TestCase):
         user_io = self.client.user_io
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
 
         user_io.request_string = lambda _: "y"
         self.client.run("upload Hello*", user_io=user_io)
@@ -200,7 +201,7 @@ class UploadTest(unittest.TestCase):
 
         files = hello_conan_files("Hello2", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
 
         user_io.request_string = lambda _: "n"
         self.client.run("upload Hello*", user_io=user_io)
@@ -209,9 +210,9 @@ class UploadTest(unittest.TestCase):
     def upload_same_package_dont_compress_test(self):
         # Create a manifest for the faked package
         pack_path = self.client.paths.package(self.package_ref)
-        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
-        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
-        save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
+        package_path = self.client.client_cache.package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(package_path)
+        expected_manifest.save(pack_path)
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
         self.assertIn("Compressing recipe", self.client.user_io.out)
@@ -234,21 +235,21 @@ class TestConan(ConanFile):
 """
         files = {CONANFILE: conanfile}
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.user_io.out)
         self.client.run("upload Hello/1.2@lasote/stable", ignore_error=False)
         self.assertIn("Uploading conanmanifest.txt", self.client.user_io.out)
 
+    def single_binary_test(self):
+        """ basic installation of a new conans
+        """
+        # Try to upload an package without upload conans first
+        self.client.run('upload %s -p %s' % (self.conan_ref, str(self.package_ref.package_id)))
+        self.assertIn("Uploaded conan recipe '%s'" % str(self.conan_ref), self.client.out)
+
     def simple_test(self):
         """ basic installation of a new conans
         """
-
-        # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s' % (self.conan_ref, str(self.package_ref.package_id)),
-                        ignore_error=True)
-        self.assertIn("There are no remote conanfiles like %s" % str(self.conan_ref),
-                      self.client.user_io.out)
-
         # Upload conans
         self.client.run('upload %s' % str(self.conan_ref))
         self.assertTrue(os.path.exists(self.server_reg_folder))
@@ -305,7 +306,7 @@ class TestConan(ConanFile):
         self.client.run('upload %s --all' % str(self.conan_ref))
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
                  if line.startswith("Uploading")]
-        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable",
+        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable to remote 'default'",
                                  "Uploading conanmanifest.txt",
                                  "Uploading conanfile.py",
                                  "Uploading conan_export.tgz",
@@ -325,11 +326,10 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
         # Fake datetime from exported date and upload again
-        digest_path = os.path.join(self.client.paths.export(self.conan_ref), CONAN_MANIFEST)
         old_digest = self.client.paths.load_manifest(self.conan_ref)
         old_digest.file_sums["new_file"] = "012345"
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
-        save(digest_path, str(fake_digest))
+        fake_digest.save(self.client.paths.export(self.conan_ref))
 
         self.client.run('upload %s' % str(self.conan_ref), ignore_error=True)
         self.assertIn("Remote recipe is newer than local recipe", self.client.user_io.out)
@@ -337,3 +337,80 @@ class TestConan(ConanFile):
         self.client.run('upload %s --force' % str(self.conan_ref))
         self.assertIn("Uploading %s" % str(self.conan_ref),
                       self.client.user_io.out)
+
+        # Repeat transfer, to make sure it is uploading again
+        self.client.run('upload %s --force' % str(self.conan_ref))
+        self.assertIn("Uploading conan_export.tgz", self.client.out)
+        self.assertIn("Uploading conanfile.py", self.client.out)
+
+    def upload_json_test(self):
+        conanfile = """
+from conans import ConanFile
+
+class TestConan(ConanFile):
+    name = "test"
+    version = "0.1"
+
+    def package(self):
+        self.copy("mylib.so", dst="lib")
+"""
+
+        client = self._get_client()
+        client.save({"conanfile.py": conanfile,
+                     "mylib.so": ""})
+        client.run("create . danimtb/testing")
+
+        # Test conflict parameter error
+        error = client.run("upload test/0.1@danimtb/* --all -p ewvfw --json upload.json",
+                           ignore_error=True)
+        self.assertTrue(error)
+        json_path = os.path.join(client.current_folder, "upload.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        self.assertTrue(output["error"])
+        self.assertEqual(0, len(output["uploaded"]))
+
+        # Test invalid reference error
+        error = client.run("upload fake/0.1@danimtb/testing --all --json upload.json",
+                           ignore_error=True)
+        self.assertTrue(error)
+        json_path = os.path.join(client.current_folder, "upload.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        self.assertTrue(output["error"])
+        self.assertEqual(0, len(output["uploaded"]))
+
+        # Test normal upload
+        client.run("upload test/0.1@danimtb/testing --all --json upload.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        output_expected = {"error": False,
+                           "uploaded": [
+                               {
+                                   "recipe": {
+                                       "id": "test/0.1@danimtb/testing",
+                                       "remote_url": "unknown",
+                                       "remote_name": "default",
+                                       "time": "unknown"
+                                   },
+                                   "packages": [
+                                       {
+                                           "id": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                                           "time": "unknown"
+                                       }
+                                   ]
+                               }
+                           ]}
+        self.assertEqual(output_expected["error"], output["error"])
+        self.assertEqual(len(output_expected["uploaded"]), len(output["uploaded"]))
+
+        for i, item in enumerate(output["uploaded"]):
+            self.assertEqual(output_expected["uploaded"][i]["recipe"]["id"], item["recipe"]["id"])
+            self.assertEqual(output_expected["uploaded"][i]["recipe"]["remote_name"],
+                             item["recipe"]["remote_name"])
+            for j, subitem in enumerate(item["packages"]):
+                self.assertEqual(output_expected["uploaded"][i]["packages"][j]["id"],
+                                 subitem["id"])

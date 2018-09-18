@@ -35,6 +35,8 @@ class AConan(ConanFile):
     copy_source_folder = None
     copy_package_folder = None
     
+    counter_package_calls = 0
+    
     no_copy_source = %(no_copy_source)s
     requires = "parent/1.0@conan/stable"
     running_local_command = %(local_command)s
@@ -80,7 +82,17 @@ class AConan(ConanFile):
         self.copy_build_folder = self.build_folder
         
     def package(self):
-        assert(self.build_folder == os.getcwd()) # Folder where we copy things to destination
+        assert(self.install_folder is not None)
+
+        if self.no_copy_source:
+            # First call with source, second with build
+            if self.counter_package_calls == 0:
+               assert(self.source_folder == os.getcwd())
+               self.counter_package_calls += 1
+            elif self.counter_package_calls == 1:
+               assert(self.build_folder == os.getcwd()) 
+        else:
+            assert(self.build_folder == os.getcwd())
     
         self.assert_in_local_cache()
         self.assert_deps_infos()
@@ -122,7 +134,7 @@ class TestFoldersAccess(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile_parent})
-        self.client.run("export conan/stable")
+        self.client.run("export . conan/stable")
 
     def source_local_command_test(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
@@ -208,26 +220,26 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create user/testing --build missing")
+        self.client.run("create . user/testing --build missing")
         self.client.run("install lib/1.0@user/testing")  # Checks deploy
 
     def full_install_test(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create conan/stable --build")
+        self.client.run("create . conan/stable --build")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create conan/stable --build")
+        self.client.run("create . conan/stable --build")
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create conan/stable --build")
+        self.client.run("create . conan/stable --build")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create conan/stable --build")
+        self.client.run("create . conan/stable --build")

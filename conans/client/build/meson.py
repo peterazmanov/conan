@@ -4,7 +4,7 @@ from conans import tools
 from conans.client import join_arguments, defs_to_string
 from conans.errors import ConanException
 from conans.tools import args_to_string
-from conans.util.files import mkdir
+from conans.util.files import mkdir, get_abs_path
 
 
 class Meson(object):
@@ -26,7 +26,6 @@ class Meson(object):
 
         self.backend = backend or "ninja"  # Other backends are poorly supported, not default other.
         self.build_dir = None
-        self.definitions = {}
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
@@ -43,18 +42,57 @@ class Meson(object):
                 'Set build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
-        self.definitions.update(self._build_type_definition())
+
+    @property
+    def build_folder(self):
+        return self.build_dir
+
+    @build_folder.setter
+    def build_folder(self, value):
+        self.build_dir = value
+
+    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
+        if (source_folder or build_folder) and (source_dir or build_dir):
+            raise ConanException("Use 'build_folder'/'source_folder'")
+
+        if source_dir or build_dir:  # OLD MODE
+            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
+            source_ret = source_dir or self._conanfile.source_folder
+        else:
+            build_ret = get_abs_path(build_folder, self._conanfile.build_folder)
+            source_ret = get_abs_path(source_folder, self._conanfile.source_folder)
+
+        if self._conanfile.in_local_cache and cache_build_folder:
+            build_ret = get_abs_path(cache_build_folder, self._conanfile.build_folder)
+
+        return source_ret, build_ret
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  pkg_config_paths=None):
+                  pkg_config_paths=None, cache_build_folder=None,
+                  build_folder=None, source_folder=None):
+        if not self._conanfile.should_configure:
+            return
         args = args or []
         defs = defs or {}
-        pc_paths = os.pathsep.join(pkg_config_paths or [self._conanfile.build_folder])
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder or "."
+
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
+                                                    source_dir, build_dir,
+                                                    cache_build_folder)
+
+        if pkg_config_paths:
+            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)
+        else:
+            pc_paths = self._conanfile.install_folder
 
         mkdir(self.build_dir)
-        build_type = ("--buildtype=%s" % self.build_type if self.build_type else "").lower()
+
+        bt = {"RelWithDebInfo": "debugoptimized",
+              "MinSizeRel": "release",
+              "Debug": "debug",
+              "Release": "release"}.get(str(self.build_type), "")
+
+        build_type = "--buildtype=%s" % bt
         arg_list = join_arguments([
             "--backend=%s" % self.backend,
             args_to_string(args),
@@ -72,6 +110,8 @@ class Meson(object):
         return command
 
     def build(self, args=None, build_dir=None, targets=None):
+        if not self._conanfile.should_build:
+            return
         if self.backend != "ninja":
             raise ConanException("Build only supported with 'ninja' backend")
 
@@ -79,7 +119,7 @@ class Meson(object):
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         arg_list = join_arguments([
-            "-C %s" % build_dir,
+            '-C "%s"' % build_dir,
             args_to_string(args),
             args_to_string(targets)
         ])

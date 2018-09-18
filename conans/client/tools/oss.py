@@ -4,6 +4,9 @@ import subprocess
 import sys
 
 import os
+
+from conans.client.tools.env import environment_append
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.tools import which
@@ -31,10 +34,16 @@ def cpu_count():
 
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
-    if "64" in platform.machine():
+    machine = platform.machine()
+    if "64" in machine:
         return "x86_64"
-    elif "86" in platform.machine():
+    elif "86" in machine:
         return "x86"
+    elif "armv8" in machine:
+        return "armv8"
+    elif "armv7" in machine:
+        return "armv7"
+
     return None
 
 # DETECT OS, VERSION AND DISTRIBUTIONS
@@ -68,6 +77,7 @@ class OSInfo(object):
         self.is_macos = platform.system() == "Darwin"
         self.is_freebsd = platform.system() == "FreeBSD"
         self.is_solaris = platform.system() == "SunOS"
+        self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
             import distro
@@ -104,12 +114,20 @@ class OSInfo(object):
     @property
     def with_pacman(self):
         if self.is_linux:
-            return self.linux_distro == "arch"
+            return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
             uname = subprocess.check_output(['uname.exe', '-s']).decode()
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
+    @property
+    def with_zypper(self):
+        if not self.is_linux:
+            return False
+        if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
+            return True
+        return False
+    
     @staticmethod
     def get_win_os_version():
         """
@@ -221,20 +239,131 @@ class OSInfo(object):
         elif version.minor() == "5.11":
             return "Solaris 11"
 
+    @staticmethod
+    def bash_path():
+        if os.getenv("CONAN_BASH_PATH"):
+            return os.getenv("CONAN_BASH_PATH")
+        return which("bash")
+
+    @staticmethod
+    def uname(options=None):
+        options = " %s" % options if options else ""
+        if platform.system() != "Windows":
+            raise ConanException("Command only for Windows operating system")
+        custom_bash_path = OSInfo.bash_path()
+        if not custom_bash_path:
+            raise ConanException("bash is not in the path")
+
+        command = '"%s" -c "uname%s"' % (custom_bash_path, options)
+        try:
+            # the uname executable is many times located in the same folder as bash.exe
+            with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
+                ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
+                return ret
+        except Exception:
+            return None
+
+    @staticmethod
+    def detect_windows_subsystem():
+        from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
+        try:
+            output = OSInfo.uname()
+        except ConanException:
+            return None
+        if not output:
+            return None
+        if "cygwin" in output:
+            return CYGWIN
+        elif "msys" in output or "mingw" in output:
+            output = OSInfo.uname("-or")
+            if output.startswith("2"):
+                return MSYS2
+            elif output.startswith("1"):
+                return MSYS
+            else:
+                return None
+        elif "linux" in output:
+            return WSL
+        else:
+            return None
+
 
 def cross_building(settings, self_os=None, self_arch=None):
-    self_os = self_os or platform.system()
-    self_arch = self_arch or detected_architecture()
-    os_setting = settings.get_safe("os")
-    arch_setting = settings.get_safe("arch")
-    platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
 
-    if os_setting and platform_os != os_setting:
+    ret = get_cross_building_settings(settings, self_os, self_arch)
+    build_os, build_arch, host_os, host_arch = ret
+
+    if host_os is not None and (build_os != host_os):
         return True
-    if arch_setting and self_arch != arch_setting:
+    if host_arch is not None and (build_arch != host_arch):
         return True
 
     return False
+
+
+def get_cross_building_settings(settings, self_os=None, self_arch=None):
+    build_os = self_os or settings.get_safe("os_build") or \
+               {"Darwin": "Macos"}.get(platform.system(), platform.system())
+    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
+    host_os = settings.get_safe("os")
+    host_arch = settings.get_safe("arch")
+
+    return build_os, build_arch, host_os, host_arch
+
+
+def get_gnu_triplet(os, arch, compiler=None):
+    """
+    Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
+
+    :param os: os to be used to create the triplet
+    :param arch: arch to be used to create the triplet
+    :param compiler: compiler used to create the triplet (only needed fo windows)
+    """
+
+    if os == "Windows" and compiler is None:
+        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
+                             "needed for os=Windows")
+
+    # Calculate the arch
+    machine = {"x86": "i686" if os != "Linux" else "x86",
+               "x86_64": "x86_64",
+               "armv6": "arm",
+               "armv7": "arm",
+               "armv7s": "arm",
+               "armv7k": "arm",
+               "armv7hf": "arm",
+               "armv8": "aarch64"}.get(arch, None)
+    if machine is None:
+        raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
+                             "translate it to the GNU triplet, please report at "
+                             " https://github.com/conan-io/conan/issues" % arch)
+
+    # Calculate the OS
+    if compiler == "gcc":
+        windows_op = "w64-mingw32"
+    elif compiler == "Visual Studio":
+        windows_op = "windows-msvc"
+    else:
+        windows_op = "windows"
+
+    op_system = {"Windows": windows_op,
+                 "Linux": "linux-gnu",
+                 "Darwin": "apple-darwin",
+                 "Android": "linux-android",
+                 "Macos": "apple-darwin",
+                 "iOS": "apple-darwin",
+                 "watchOS": "apple-darwin",
+                 "tvOS": "apple-darwin"}.get(os, os.lower())
+
+    if os in ("Linux", "Android"):
+        if "arm" in arch and arch != "armv8":
+            op_system += "eabi"
+
+        if arch == "armv7hf" and os == "Linux":
+            op_system += "hf"
+
+    return "%s-%s" % (machine, op_system)
+
 
 try:
     os_info = OSInfo()

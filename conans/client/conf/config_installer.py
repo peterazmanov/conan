@@ -1,10 +1,24 @@
 import os
-from conans.tools import unzip
 import shutil
+from six.moves.urllib.parse import urlparse
+
+from conans.tools import unzip
 from conans.util.files import rmdir, mkdir
 from conans.client.remote_registry import RemoteRegistry
 from conans import tools
 from conans.errors import ConanException
+import subprocess
+
+
+def _hide_password(resource):
+    """
+    Hide password from url/file path
+
+    :param resource: string with url or file path
+    :return: resource with hidden password if present
+    """
+    password = urlparse(resource).password
+    return resource.replace(password, "<hidden>") if password else resource
 
 
 def _handle_remotes(registry_path, remote_file, output):
@@ -25,11 +39,18 @@ def _handle_profiles(source_folder, target_folder, output):
             shutil.copy(os.path.join(root, f), os.path.join(target_folder, profile))
 
 
-def _process_git_repo(repo_url, client_cache, output, runner, tmp_folder):
+def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl, args=None):
     output.info("Trying to clone repo  %s" % repo_url)
 
     with tools.chdir(tmp_folder):
-        runner('git clone "%s" config' % repo_url, output=output)
+        try:
+            args = args or ""
+            subprocess.check_output('git -c http.sslVerify=%s %s clone "%s" config' % (verify_ssl, args, repo_url),
+                                    shell=True)
+            output.info("Repo cloned")
+        except Exception as e:
+            raise ConanException("config install error. Can't clone repo: %s" % str(e))
+
     tmp_folder = os.path.join(tmp_folder, "config")
     _process_folder(tmp_folder, client_cache, output)
 
@@ -63,8 +84,11 @@ def _process_folder(folder, client_cache, output):
                 registry_path = client_cache.registry
                 _handle_remotes(registry_path, os.path.join(root, f), output)
             else:
-                output.info("Copying file %s to %s" % (f, client_cache.conan_folder))
-                shutil.copy(os.path.join(root, f), client_cache.conan_folder)
+                relpath = os.path.relpath(root, folder)
+                target_folder = os.path.join(client_cache.conan_folder, relpath)
+                mkdir(target_folder)
+                output.info("Copying file %s to %s" % (f, target_folder))
+                shutil.copy(os.path.join(root, f), target_folder)
         for d in dirs:
             if d == "profiles":
                 output.info("Installing profiles")
@@ -74,14 +98,17 @@ def _process_folder(folder, client_cache, output):
         dirs[:] = [d for d in dirs if d not in ("profiles", ".git")]
 
 
-def _process_download(item, client_cache, output, tmp_folder):
-    output.info("Trying to download  %s" % item)
+def _process_download(item, client_cache, output, tmp_folder, verify_ssl):
+    output.info("Trying to download  %s" % _hide_password(item))
     zippath = os.path.join(tmp_folder, "config.zip")
-    tools.download(item, zippath, out=output)
-    _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
+    try:
+        tools.download(item, zippath, out=output, verify=verify_ssl)
+        _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
+    except Exception as e:
+        raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(item, client_cache, output, runner):
+def configuration_install(item, client_cache, output, verify_ssl, config_type=None, args=None):
     tmp_folder = os.path.join(client_cache.conan_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
@@ -94,13 +121,13 @@ def configuration_install(item, client_cache, output, runner):
                 raise ConanException("Called config install without arguments and "
                                      "'general.config_install' not defined in conan.conf")
 
-        if item.endswith(".git"):
-            _process_git_repo(item, client_cache, output, runner, tmp_folder)
+        if item.endswith(".git") or config_type == "git":
+            _process_git_repo(item, client_cache, output, tmp_folder, verify_ssl, args)
         elif os.path.exists(item):
             # is a local file
             _process_zip_file(item, client_cache, output, tmp_folder)
         elif item.startswith("http"):
-            _process_download(item, client_cache, output, tmp_folder)
+            _process_download(item, client_cache, output, tmp_folder, verify_ssl)
         else:
             raise ConanException("I don't know how to process %s" % item)
     finally:
