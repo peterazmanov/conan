@@ -1,16 +1,16 @@
 variables:
-  runner: '.ci/jenkins/runner.py'
+  runner: .ci/jenkins/runner.py
   module: '"conans.test"'
-  api_conf: 'v1'
-  flavor: 'no_revisions'
+  api_conf: v1
+  flavor: no_revisions
   num_cores: 4
-  workdir: "."
+  workdir: .
   sourcedir: $(Build.Repository.LocalPath)
 
 resources:
   containers:
   - container: conan_tests
-    image: lasote/conantests_azure
+    image: lasote/conan_tests_azure
 
 jobs:
 - job: LinuxPy27
