@@ -33,9 +33,9 @@ jobs:
     inputs:
       archiveFilePatterns: 'cmake.zip'
       destinationFolder: '_cmake'
-  - script: dir
+  - script: dir $(sourcedir)\_cmake\bin
   - script: set PATH=$(sourcedir)\_cmake\bin;%PATH%
-  - script: set PATH=$(sourcedir)\_cmake\bin;%PATH% && cmake --version && $(sourcedir)\_cmake\bin\cmake --version
+  - script: set PATH=$(sourcedir)\_cmake\bin;%PATH% && cmake --version && $(sourcedir)\_cmake\bin\cmake.exe --version
   - script: set PATH=$(sourcedir)\_cmake\bin;%PATH% && python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor) && type $(sourcedir)/tests.json
     displayName: Regular tests
     env:
