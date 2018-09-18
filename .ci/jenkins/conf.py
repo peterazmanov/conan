@@ -7,8 +7,8 @@ winpylocation = {"py27": "C:\\Python27\\python.exe",
                  "py34": "C:\\Python34\\python.exe",
                  "py36": "C:\\Python36\\python.exe"}
 
-macpylocation = {"py27": "/usr/bin/python",  # /Users/jenkins_ci/.pyenv/versions/2.7.11/bin/python",
-                 "py37": "/usr/bin/python3"}
+macpylocation = {"py27": "/usr/local/bin/python",
+                 "py37": "/usr/local/bin/python3"}
 
 linuxpylocation = {"py27": "/usr/bin/python2.7",
                    "py34": "/usr/bin/python3.4",
