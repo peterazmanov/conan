@@ -381,7 +381,7 @@ conan_set_std()
                    "-s compiler.libcxx=libstdc++11")
 
         if cmake_version < Version("3.12.0"):
-            self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
+            self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
         else:
             self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
 

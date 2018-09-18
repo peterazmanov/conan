@@ -1,11 +1,10 @@
 # File: jobs/build.yml
 
 parameters:
-  name: ''
   pyver: ''
 
 jobs:
-- job: ${{ parameters.name }}
+- job: Windows${{ parameters.name }}
   variables:
     pyver: ${{ parameters.pyver }}
   pool:

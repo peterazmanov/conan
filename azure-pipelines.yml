@@ -12,40 +12,36 @@ resources:
   - container: conan_tests
     image: lasote/conan_tests_azure
 
+pool:
+  timeoutInMinutes: 0
+  cancelTimeoutInMinutes: 0
 
 jobs:
 
 - template: .ci/azure/build_linux.yml
   parameters:
-    name: LinuxPy27
     pyver: py27
 
 - template: .ci/azure/build_linux.yml
   parameters:
-    name: LinuxPy36
     pyver: py36
 
 - template: .ci/azure/build_linux.yml
   parameters:
-    name: LinuxPy37
     pyver: py37
 
 - template: .ci/azure/build_macos.yml
   parameters:
-    name: Macospy27
     pyver: py27
 
 - template: .ci/azure/build_macos.yml
   parameters:
-    name: Macospy37
     pyver: py37
 
 - template: .ci/azure/build_windows.yml
   parameters:
-    name: WindowsPy27
     pyver: py27
 
 - template: .ci/azure/build_windows.yml
   parameters:
-    name: WindowsPy36
     pyver: py36

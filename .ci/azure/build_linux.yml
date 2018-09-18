@@ -1,13 +1,13 @@
 # File: jobs/build.yml
 
 parameters:
-  name: ''
   pyver: ''
 
 jobs:
-- job: ${{ parameters.name }}
+- job: Linux${{ parameters.name }}
 
   variables:
+    num_cores: 8
     pyver: ${{ parameters.pyver }}
   pool:
     vmImage: 'ubuntu-16.04'
