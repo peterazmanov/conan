@@ -8,6 +8,7 @@ winpylocation = {"py27": "python.exe",
                  "py36": "python.exe"}
 
 macpylocation = {"py27": "python",
+                 "py36": "python",
                  "py37": "/usr/local/bin/python3"}
 
 linuxpylocation = {"py27": "/usr/bin/python2.7",
