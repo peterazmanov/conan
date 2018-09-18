@@ -12,14 +12,14 @@ jobs:
     vmImage: 'xcode9-macos10.13'
   steps:
   - task: UsePythonVersion@0
-      inputs:
-        - ${{ if eq(parameters.pyver, 'py36') }}:
-            versionSpec: '3.6'
-        - ${{ if eq(parameters.pyver, 'py34') }}:
-            versionSpec: '3.4'
-        - ${{ if eq(parameters.pyver, 'py27') }}:
-            versionSpec: '2.7'
-        addToPath: true
+    inputs:
+      - ${{ if eq(parameters.pyver, 'py36') }}:
+        versionSpec: '3.6'
+      - ${{ if eq(parameters.pyver, 'py34') }}:
+        versionSpec: '3.4'
+      - ${{ if eq(parameters.pyver, 'py27') }}:
+        versionSpec: '2.7'
+      addToPath: true
   - script: sudo pip install virtualenv
   - script: brew install pkg-config
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
