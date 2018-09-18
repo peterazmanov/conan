@@ -4,7 +4,7 @@ parameters:
   pyver: ''
 
 jobs:
-- job: Windows${{ parameters.name }}
+- job: Windows${{ parameters.pyver }}
   timeoutInMinutes: 0
   cancelTimeoutInMinutes: 0
   variables:

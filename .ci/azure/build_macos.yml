@@ -4,7 +4,7 @@ parameters:
   pyver: ''
 
 jobs:
-- job: Macos${{ parameters.name }}
+- job: Macos${{ parameters.pyver }}
   timeoutInMinutes: 0
   cancelTimeoutInMinutes: 0
   variables:
@@ -15,3 +15,4 @@ jobs:
   - script: sudo pip install virtualenv
   - script: brew install pkg-config
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
+    displayName: Regular tests
