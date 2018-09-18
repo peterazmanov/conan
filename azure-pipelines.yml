@@ -27,8 +27,8 @@ jobs:
 
 - template: .ci/azure/build_macos.yml
   parameters:
-    name: Macospy36
-    pyver: py36
+    name: Macospy37
+    pyver: py37
 
 
 - job: Windows
