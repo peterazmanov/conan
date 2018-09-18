@@ -47,7 +47,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
 
     #  --nocapture
     timer = '--with-timing --output-directory="%s" ' % source_folder
-    command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
+    command = "cmake --version && virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
               "{pip_installs} " \
               "python setup.py install && " \
