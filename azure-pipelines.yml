@@ -3,7 +3,7 @@ variables:
   module: '"conans.test"'
   api_conf: v1
   flavor: no_revisions
-  num_cores: 2
+  num_cores: 4
   workdir: $(Build.Repository.LocalPath)
   sourcedir: $(Build.Repository.LocalPath)
 
@@ -33,7 +33,7 @@ jobs:
 
 - template: .ci/azure/build_macos.yml
   parameters:
-    pyver: py37
+    pyver: py36
 
 - template: .ci/azure/build_windows.yml
   parameters:
