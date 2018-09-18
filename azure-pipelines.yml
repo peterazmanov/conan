@@ -12,7 +12,6 @@ resources:
   - container: conan_tests
     image: lasote/conan_tests_azure
 
-
 jobs:
 
 - template: .ci/azure/build_linux.yml
