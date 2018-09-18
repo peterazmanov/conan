@@ -1,0 +1,44 @@
+variables:
+  runner: .ci/runner.py
+  module: '"conans.test"'
+  api_conf: v1
+  flavor: no_revisions
+  num_cores: 4
+  workdir: $(Build.Repository.LocalPath)
+  sourcedir: $(Build.Repository.LocalPath)
+
+resources:
+  containers:
+  - container: conan_tests
+    image: lasote/conan_tests_azure
+
+
+jobs:
+
+- template: .ci/azure/build_linux.yml
+  parameters:
+    pyver: py27
+
+- template: .ci/azure/build_linux.yml
+  parameters:
+    pyver: py36
+
+- template: .ci/azure/build_linux.yml
+  parameters:
+    pyver: py37
+
+- template: .ci/azure/build_macos.yml
+  parameters:
+    pyver: py27
+
+- template: .ci/azure/build_macos.yml
+  parameters:
+    pyver: py36
+
+- template: .ci/azure/build_windows.yml
+  parameters:
+    pyver: py27
+
+- template: .ci/azure/build_windows.yml
+  parameters:
+    pyver: py36
