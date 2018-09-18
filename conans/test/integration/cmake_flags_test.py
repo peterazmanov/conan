@@ -379,7 +379,11 @@ conan_set_std()
 
         client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
                    "-s compiler.libcxx=libstdc++11")
-        self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
+
+        if cmake_version < Version("3.12.0"):
+            self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
+        else:
+            self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
 
         client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
                    "-s compiler.libcxx=libstdc++11")
