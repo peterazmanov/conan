@@ -9,8 +9,9 @@ jobs:
   cancelTimeoutInMinutes: 0
   variables:
     pyver: ${{ parameters.pyver }}
+    num_cores: 8
   pool:
-    vmImage: 'vs2015-win2012r2' # 'vs2017-win2016'
+    vmImage: 'vs2017-win2016'
   steps:
   - task: UsePythonVersion@0
     inputs:
