@@ -4,7 +4,7 @@ variables:
   api_conf: v1
   flavor: no_revisions
   num_cores: 4
-  workdir: .
+  workdir: $(Build.Repository.LocalPath)
   sourcedir: $(Build.Repository.LocalPath)
 
 resources:
