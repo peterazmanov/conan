@@ -29,7 +29,7 @@ def numcores = "--num_cores=3"
 
 def win_tmp_base = "D:/J/t/"
 def rest_tmp_base = "/tmp/"
-def runner = ".ci/jenkins/runner.py"
+def runner = ".ci/runner.py"
 
 def commit
 def branch

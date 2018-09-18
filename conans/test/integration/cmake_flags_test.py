@@ -345,9 +345,11 @@ target_link_libraries(mylib ${CONAN_LIBS})
 
     def standard_20_as_cxx_flag_test(self):
         output = subprocess.check_output(["cmake", "--version"], stderr=subprocess.STDOUT)
+        print(output)
         line = decode_text(output.splitlines()[0])
         version = line.split("cmake version")[1].strip()
         cmake_version = Version(version)
+        print(cmake_version)
         # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
         conanfile = """
 import os

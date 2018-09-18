@@ -1,5 +1,5 @@
 variables:
-  runner: .ci/jenkins/runner.py
+  runner: .ci/runner.py
   module: '"conans.test"'
   api_conf: v1
   flavor: no_revisions

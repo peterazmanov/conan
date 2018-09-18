@@ -12,4 +12,5 @@ jobs:
     vmImage: 'xcode9-macos10.13'
   steps:
   - script: sudo pip install virtualenv
+  - script: brew install pkg-config
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
