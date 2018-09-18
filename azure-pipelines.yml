@@ -17,4 +17,28 @@ jobs:
 
 - template: .ci/azure/build_linux.yml
   parameters:
-    pyver: 'py27'
+    pyver: py27
+
+- template: .ci/azure/build_linux.yml
+  parameters:
+    pyver: py36
+
+- template: .ci/azure/build_linux.yml
+  parameters:
+    pyver: py37
+
+- template: .ci/azure/build_macos.yml
+  parameters:
+    pyver: py27
+
+- template: .ci/azure/build_macos.yml
+  parameters:
+    pyver: py37
+
+- template: .ci/azure/build_windows.yml
+  parameters:
+    pyver: py27
+
+- template: .ci/azure/build_windows.yml
+  parameters:
+    pyver: py36

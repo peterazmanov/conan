@@ -4,7 +4,7 @@ parameters:
   pyver: ''
 
 jobs:
-- job: Macos${{ parameters.pyver }}
+- job: ${{ format('Macos{0}', parameters.pyver) }}
   timeoutInMinutes: 0
   cancelTimeoutInMinutes: 0
   variables:
