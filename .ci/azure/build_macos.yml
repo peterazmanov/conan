@@ -12,6 +12,7 @@ jobs:
   pool:
     vmImage: 'xcode9-macos10.13'
   steps:
+  - script: ls -la /Users/vsts/hostedtoolcache/Python/
   - task: UsePythonVersion@0
     inputs:
       ${{ if eq(parameters.pyver, 'py37') }}:
@@ -23,7 +24,7 @@ jobs:
       ${{ if eq(parameters.pyver, 'py27') }}:
         versionSpec: '2.7.15'
       addToPath: true
-      architecture: 'x64' 
+      architecture: 'x64'
   - script: sudo pip install virtualenv
   - script: brew install pkg-config
   - script: python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) -f $(flavor)
