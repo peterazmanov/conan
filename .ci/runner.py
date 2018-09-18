@@ -46,12 +46,13 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
         pip_installs += "pip install -r conans/requirements_osx.txt && "
 
     #  --nocapture
+    timer = "--with-timer"
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
               "{pip_installs} " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
-              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} " \
+              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} {timer}" \
               "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
@@ -65,7 +66,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
                                        "source_cmd": source_cmd,
                                        "debug_traces": debug_traces,
                                        "multiprocess": multiprocess,
-                                       "pip_installs": pip_installs})
+                                       "pip_installs": pip_installs,
+                                       "timer": timer})
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
