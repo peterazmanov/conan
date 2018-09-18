@@ -5,8 +5,6 @@ parameters:
 
 jobs:
 - job: Macos${{ parameters.name }}
-  timeoutInMinutes: 0
-  cancelTimeoutInMinutes: 0
   variables:
     pyver: ${{ parameters.pyver }}
   pool:
