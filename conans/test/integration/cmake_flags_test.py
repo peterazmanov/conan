@@ -2,10 +2,14 @@ import platform
 import unittest
 import os
 
+from future.moves import subprocess
+
+from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
+from conans.util.files import decode_text
 
 conanfile_py = """
 from conans import ConanFile
@@ -340,6 +344,10 @@ target_link_libraries(mylib ${CONAN_LIBS})
         self.assertTrue(os.path.exists(libpath))
 
     def standard_20_as_cxx_flag_test(self):
+        output = subprocess.check_output(["cmake", "--version"], stderr=subprocess.STDOUT)
+        line = decode_text(output.splitlines()[0])
+        version = line.split("cmake version")[1].strip()
+        cmake_version = Version(version)
         # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
         conanfile = """
 import os
@@ -373,7 +381,10 @@ conan_set_std()
 
         client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
                    "-s compiler.libcxx=libstdc++11")
-        self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
+        if cmake_version < Version("3.12.0"):
+            self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
+        else:
+            self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
 
     def fpic_applied_test(self):
         conanfile = """
