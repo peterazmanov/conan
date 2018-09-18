@@ -12,13 +12,12 @@ jobs:
   pool:
     vmImage: 'xcode9-macos10.13'
   steps:
-  - script: ls -la /Users/vsts/hostedtoolcache/Python/
   - task: UsePythonVersion@0
     inputs:
       ${{ if eq(parameters.pyver, 'py37') }}:
         versionSpec: '3.7.0'
       ${{ if eq(parameters.pyver, 'py36') }}:
-        versionSpec: '3.6.5'
+        versionSpec: '3.6'
       ${{ if eq(parameters.pyver, 'py34') }}:
         versionSpec: '3.4.8'
       ${{ if eq(parameters.pyver, 'py27') }}:
