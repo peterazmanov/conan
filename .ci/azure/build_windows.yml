@@ -9,7 +9,7 @@ jobs:
   cancelTimeoutInMinutes: 0
   variables:
     pyver: ${{ parameters.pyver }}
-    num_cores: 2
+    num_cores: 4
     cmake_version: cmake-3.7.2-win32-x86
   pool:
     vmImage: 'vs2017-win2016'
