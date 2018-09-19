@@ -34,3 +34,4 @@ jobs:
     env:
       CONAN_RECIPE_LINTER: 'False'
       CONAN_TEST_FOLDER: $(workdir)
+      CONAN_LOGGING_LEVEL: 1

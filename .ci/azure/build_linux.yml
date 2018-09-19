@@ -21,5 +21,6 @@ jobs:
     env:
       CONAN_RECIPE_LINTER: 'False'
       CONAN_TEST_FOLDER: $(workdir)
+      CONAN_LOGGING_LEVEL: 1
   - script: python $(runner) conans.test.remote.rest_api_test $(pyver) $(workdir) /tmp
     displayName: REST API tests
