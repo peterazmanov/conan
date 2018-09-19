@@ -25,7 +25,13 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     elif flavor == "no_revisions":
         excluded_tags.append("only_revisions")
 
-    exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
+    def tag_name(the_tag):
+        if "!" not in the_tag:
+            return "not %s" % the_tag
+        else:
+            return the_tag
+
+    exluded_tags_str = '-A "%s"' % " and ".join([tag_name(tag) for tag in excluded_tags]) if excluded_tags else ""
 
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
@@ -33,7 +39,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     debug_traces = ""  # "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
     multiprocess = ("--processes=%s --process-timeout=1000 "
-                    "--process-restartworker --with-coverage" % num_cores)
+                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
 
     if num_cores <= 1:
         multiprocess = ""

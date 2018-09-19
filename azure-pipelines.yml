@@ -43,7 +43,7 @@ jobs:
 - template: .ci/azure/build_windows.yml
   parameters:
     pyver: py27
-    tags: '-e "!slow"'
+    tags: "-e !slow"
     extra_name: "Slow"
 
 - template: .ci/azure/build_windows.yml
