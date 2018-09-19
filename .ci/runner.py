@@ -33,7 +33,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     debug_traces = ""  # "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
     multiprocess = ("--processes=%s --process-timeout=1000 "
-                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
+                    "--process-restartworker --with-coverage" % num_cores)
 
     if num_cores <= 1:
         multiprocess = ""
