@@ -80,6 +80,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
 
     with chdir(source_folder):
         with environment_append(env):
+            print(">>>>>>>> \n %s \n >>>>>>>>>>" % command)
             run(command)
 
 
