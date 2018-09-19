@@ -2,6 +2,7 @@ import unittest
 import os
 import platform
 import shutil
+from nose.plugins.attrib import attr
 
 from parameterized.parameterized import parameterized
 
@@ -95,6 +96,7 @@ target_link_libraries(hello{name} {dep})
 """
 
 
+@attr("slow")
 class WorkspaceTest(unittest.TestCase):
 
     def build_requires_test(self):

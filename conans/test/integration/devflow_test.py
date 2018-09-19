@@ -1,5 +1,7 @@
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans import tools
 from conans.test.utils.tools import TestClient
 import os
@@ -29,6 +31,7 @@ class ConanFileToolsTest(ConanFile):
 '''
 
 
+@attr("slow")
 class DevInSourceFlowTest(unittest.TestCase):
 
     def _assert_pkg(self, folder):
