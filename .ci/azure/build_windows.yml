@@ -6,7 +6,7 @@ parameters:
   extra_name: ''
 
 jobs:
-- job: ${{ format('Windows{0}{1}', parameters.pyver, extra_name) }}
+- job: ${{ format('Windows{0}{1}', parameters.pyver, parameters.extra_name) }}
   timeoutInMinutes: 0
   cancelTimeoutInMinutes: 0
   variables:
