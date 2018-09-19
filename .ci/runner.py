@@ -29,7 +29,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
         if "!" not in the_tag:
             return "not %s" % the_tag
         else:
-            return the_tag
+            return the_tag.replace("!", "")
 
     exluded_tags_str = '-A "%s"' % " and ".join([tag_name(tag) for tag in excluded_tags]) if excluded_tags else ""
 

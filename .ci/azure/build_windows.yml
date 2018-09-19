@@ -36,7 +36,7 @@ jobs:
   - script: |
       set PATH=$(sourcedir)\_cmake\$(cmake_version)\bin;%PATH%
       python $(runner) $(module) $(pyver) $(sourcedir) $(workdir) -e rest_api --num_cores=$(num_cores) --server_api=$(api_conf) $(tags) -f $(flavor) && type $(sourcedir)/tests.json
-    displayName: Regular tests (FAST)
+    displayName: Regular tests
     env:
       CONAN_TEST_FOLDER: $(workdir)
       CONAN_LOGGING_LEVEL: 10
