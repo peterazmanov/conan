@@ -121,7 +121,7 @@ class HelloConan(ConanFile):
         self.assertIn('/p:MyProp1="MyValue1"', command)
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @unittest.skipUnless(platform.system() == "WindowsLSLSLLSLS", "Requires MSBuild")
     def reuse_msbuild_object_test(self):
         # https://github.com/conan-io/conan/issues/2865
         conan_build_vs = """
