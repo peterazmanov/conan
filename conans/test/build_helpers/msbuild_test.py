@@ -56,7 +56,7 @@ class HelloConan(ConanFile):
 
     def build(self):
         msbuild = MSBuild(self)
-        msbuild.build("MyProject.sln")
+        msbuild.build("MyProject.sln", upgrade_project=False)
 
     def package(self):
         self.copy(pattern="*.exe")
@@ -139,8 +139,8 @@ class HelloConan(ConanFile):
 
     def build(self):
         msbuild = MSBuild(self)
-        msbuild.build("MyProject.sln", build_type="Release")
-        msbuild.build("MyProject.sln", build_type="Debug")
+        msbuild.build("MyProject.sln", build_type="Release", upgrade_project=False)
+        msbuild.build("MyProject.sln", build_type="Debug", upgrade_project=False)
         self.output.info("build() completed")
 """
         client = TestClient()
