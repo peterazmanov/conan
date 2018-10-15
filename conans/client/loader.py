@@ -67,10 +67,17 @@ class ConanFileLoader(object):
             if version:
                 conanfile.version = version
             else:
-                raise ConanException("conanfile didn't specify version")
+                if hasattr(conanfile, "default_version"):
+                    conanfile.version = conanfile.default_version
+                else:
+                    raise ConanException("conanfile didn't specify version")
         elif version and version != conanfile.version:
             raise ConanException("Package recipe exported with version %s!=%s"
                                  % (version, conanfile.version))
+
+        if hasattr(conanfile, "versions") and conanfile.version not in conanfile.versions:
+            raise ConanException("Version '%s' not supported by the recipe. Allowed versions: %s"
+                                 % (conanfile.version, conanfile.versions))
 
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         output = ScopedOutput(str(conan_ref), self._output)
