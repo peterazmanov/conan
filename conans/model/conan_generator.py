@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractproperty
 
 class Generator(object):
     __metaclass__ = ABCMeta
+    export_folder = None
 
     def __init__(self, conanfile):
         self.conanfile = conanfile

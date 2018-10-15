@@ -122,3 +122,50 @@ class CustomGeneratorTest(unittest.TestCase):
         for i in (1, 2):
             generated = load(os.path.join(client.current_folder, "file%d.gen" % i))
             self.assertEqual(generated, "CustomContent%d" % i)
+
+    def export_template_generator_test(self):
+
+        templated_generator = """
+import os
+from conans import ConanFile
+from conans import tools
+from conans.model import Generator
+
+class MyCustomTemplateGenerator(Generator):
+    @property
+    def filename(self):
+        return "customfile.gen"
+
+    @property
+    def content(self):
+        template = tools.load(os.path.join(self.export_folder, "mytemplate.txt"))
+        return template % "Hello"
+
+
+class MyCustomGeneratorWithTemplatePackage(ConanFile):
+    name = "MyCustomTemplateGenerator"
+    version = "0.2"
+    exports = "mytemplate.txt"
+"""
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client.save({CONANFILE: templated_generator, "mytemplate.txt": "Template: %s"})
+        client.run("export . lasote/stable")
+
+        # Dummy lib
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+        client.save(files)
+        client.run("export . lasote/stable")
+
+        # Consumer
+        template_consumer = """
+[requires]
+Hello0/0.1@lasote/stable
+MyCustomTemplateGenerator/0.2@lasote/stable
+
+[generators]
+MyCustomTemplateGenerator
+"""
+        client.save({CONANFILE_TXT: template_consumer}, clean_first=True)
+        client.run("install . --build")
+        generated = load(os.path.join(client.current_folder, "customfile.gen"))
+        self.assertEqual(generated, "Template: Hello")

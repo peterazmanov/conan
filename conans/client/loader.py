@@ -45,7 +45,7 @@ class ConanFileLoader(object):
     def load_class(self, conanfile_path):
         loaded, filename = _parse_file(conanfile_path)
         try:
-            conanfile = _parse_module(loaded, filename)
+            conanfile = _parse_module(loaded, filename, conanfile_path)
             conanfile.python_requires = self._python_requires.references
             return conanfile
         except Exception as e:  # re-raise with file name
@@ -187,13 +187,14 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def _parse_module(conanfile_module, filename):
+def _parse_module(conanfile_module, filename, conanfile_path):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
     @return: the main ConanFile class from the module
     """
     result = None
+
     for name, attr in conanfile_module.__dict__.items():
         if name[0] == "_":
             continue
@@ -205,7 +206,8 @@ def _parse_module(conanfile_module, filename):
                 raise ConanException("More than 1 conanfile in the file")
         if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
                 attr.__dict__["__module__"] == filename):
-            registered_generators.add(attr.__name__, attr)
+            generator = registered_generators.add(attr.__name__, attr)
+            generator.export_folder = os.path.dirname(conanfile_path)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")

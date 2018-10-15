@@ -36,6 +36,7 @@ class _GeneratorManager(object):
     def add(self, name, generator_class):
         if name not in self._generators:
             self._generators[name] = generator_class
+        return self._generators[name]
 
     @property
     def available(self):
