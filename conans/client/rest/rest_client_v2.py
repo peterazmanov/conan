@@ -33,9 +33,9 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url):
+    def _get_remote_file_contents(self, url, binary=False):
         downloader = Downloader(self.requester, self._output, self.verify_ssl)
-        contents = downloader.download(url, auth=self.auth)
+        contents = downloader.download(url, auth=self.auth, binary=binary)
         return contents
 
     def _get_snapshot(self, url, reference):
@@ -115,7 +115,7 @@ class RestV2Methods(RestCommonMethods):
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
-    def get_path(self, conan_reference, package_id, path):
+    def get_path(self, conan_reference, package_id, path, binary):
 
         if not package_id:
             url = self._recipe_url(conan_reference)
@@ -151,8 +151,8 @@ class RestV2Methods(RestCommonMethods):
             return sorted(ret)
         else:
             url += "/%s" % path
-            content = self._get_remote_file_contents(url)
-            return decode_text(content)
+            content = self._get_remote_file_contents(url, binary=binary)
+            return decode_text(content) if not binary else content
 
     def _upload_recipe(self, conan_reference, files_to_upload, retry, retry_wait):
         # Direct upload the recipe

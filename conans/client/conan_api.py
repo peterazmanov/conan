@@ -918,7 +918,7 @@ class ConanAPIV1(object):
         return p
 
     @api_method
-    def get_path(self, reference, package_id=None, path=None, remote_name=None):
+    def get_path(self, reference, package_id=None, path=None, remote_name=None, raw=False):
         from conans.client.local_file_getter import get_path
         reference = ConanFileReference.loads(str(reference))
         if not path:
@@ -928,7 +928,7 @@ class ConanAPIV1(object):
             return get_path(self._client_cache, reference, package_id, path), path
         else:
             remote = self.get_remote_by_name(remote_name)
-            return self._remote_manager.get_path(reference, package_id, path, remote), path
+            return self._remote_manager.get_path(reference, package_id, path, remote, raw), path
 
     @api_method
     def export_alias(self, reference, target_reference):

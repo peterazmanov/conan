@@ -179,8 +179,8 @@ class ConanApiAuthManager(object):
         return self._rest_client.remove_packages(conan_reference, package_ids)
 
     @input_credentials_if_unauthorized
-    def get_path(self, conan_reference, path, package_id):
-        return self._rest_client.get_path(conan_reference, path, package_id)
+    def get_path(self, conan_reference, path, package_id, raw):
+        return self._rest_client.get_path(conan_reference, path, package_id, raw)
 
     def authenticate(self, user, password):
         if user is None:  # The user is already in DB, just need the passwd

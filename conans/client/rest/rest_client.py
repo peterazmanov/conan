@@ -59,8 +59,8 @@ class RestApiClient(object):
     def get_package(self, package_reference, dest_folder):
         return self._get_api().get_package(package_reference, dest_folder)
 
-    def get_path(self, conan_reference, package_id, path):
-        return self._get_api().get_path(conan_reference, package_id, path)
+    def get_path(self, conan_reference, package_id, path, binary):
+        return self._get_api().get_path(conan_reference, package_id, path, binary)
 
     def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy, remote_manifest):
         return self._get_api().upload_recipe(conan_reference, the_files, retry, retry_wait,

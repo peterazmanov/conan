@@ -116,7 +116,7 @@ class Downloader(object):
         self.verify = verify
 
     def download(self, url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False,
-                 headers=None):
+                 headers=None, binary=False):
 
         if file_path and not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
@@ -130,8 +130,9 @@ class Downloader(object):
                 # the dest folder before
                 raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
-        return call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth,
-                               headers, file_path)
+        ret = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth,
+                              headers, file_path)
+        return bytes(ret) if not binary else ret
 
     def _download_file(self, url, auth, headers, file_path):
         t1 = time.time()
@@ -214,7 +215,7 @@ class Downloader(object):
                                      "complete: %s < %s" % (dl_size, total_length))
 
         if not file_path:
-            return bytes(ret)
+            return ret
         else:
             return
 

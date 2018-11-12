@@ -1307,7 +1307,8 @@ class Command(object):
                             help='Do not decorate the text')
         args = parser.parse_args(*args)
 
-        ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote)
+        ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote,
+                                         args.raw)
         if isinstance(ret, list):
             self._outputer.print_dir_list(ret, path, args.raw)
         else:

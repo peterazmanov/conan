@@ -218,7 +218,7 @@ class RestV1Methods(RestCommonMethods):
 
         return urls
 
-    def get_path(self, conan_reference, package_id, path):
+    def get_path(self, conan_reference, package_id, path, binary):
         """Gets a file content or a directory list"""
 
         tmp = "%s/download_urls"
@@ -256,9 +256,11 @@ class RestV1Methods(RestCommonMethods):
         else:
             downloader = Downloader(self.requester, None, self.verify_ssl)
             auth, _ = self._file_server_capabilities(urls[path])
-            content = downloader.download(urls[path], auth=auth)
-
-            return decode_text(content)
+            content = downloader.download(urls[path], auth=auth, binary=binary)
+            if not binary:
+                return decode_text(content)
+            else:
+                return content
 
     def _get_snapshot(self, url):
         try:
