@@ -69,9 +69,11 @@ class ConanName(object):
     @staticmethod
     def validate_revision(revision):
         if ConanName._validation_revision_pattern.match(revision) is None:
+            import traceback
+            traceback.print_stack()
             raise InvalidNameException("The revision field, must contain only letters "
                                        "and numbers with a length between 1 and "
-                                       "%s" % ConanName._max_chars)
+                                       "%s (Provided: %s)" % (ConanName._max_chars, revision))
 
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision")):
@@ -99,6 +101,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(self.version, True, reference_token="package version")
         ConanName.validate_name(self.user, reference_token="user name")
         ConanName.validate_name(self.channel, reference_token="channel")
+        print("Validating reference: {r.name}/{r.version}@{r.user}/{r.channel}#{r.revision}".format(r=self))
         if self.revision:
             ConanName.validate_revision(self.revision)
 
@@ -146,6 +149,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return obj
 
     def validate(self):
+        print("Validating pref: {r.id}#{r.revision}".format(r=self))
         if self.revision:
             ConanName.validate_revision(self.revision)
 
