@@ -6,12 +6,27 @@ import textwrap
 import unittest
 
 from conans.model.editable_layout import LAYOUTS_FOLDER
+from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TurboTestClient, GenConanfile
 from conans.util.files import load, save_files, save
 
 
 class LayoutTest(unittest.TestCase):
+
+    def test_weird_crash(self):
+        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        client = TurboTestClient()
+        client.create(ref)
+        save(os.path.join(client.current_folder, "mylayout"), textwrap.dedent("""
+        [build_folder]
+        build
+        """))
+        client.run("editable add . {} --layout mylayout".format(ref))
+        client.change_to_clean_folder()
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+        conanfile2 = GenConanfile().with_requirement(ref)
+        client.create(ref2, conanfile=conanfile2)
 
     def test_missing_wrong_layouts(self):
         client = TestClient()

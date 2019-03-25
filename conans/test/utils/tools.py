@@ -975,6 +975,10 @@ class TurboTestClient(TestClient):
                                              rel_project_path=subpath, delete_checkout=False)
         return rev
 
+    def change_to_clean_folder(self):
+        new_folder = temp_folder()
+        self.current_folder = new_folder
+
 
 class GenConanfile(object):
     """
