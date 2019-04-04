@@ -192,17 +192,28 @@ class GraphManager(object):
             new_profile_build_requires = []
             profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
+                exclusion_pattern = False
+                if pattern.startswith("!"):
+                    pattern = pattern[1:]
+                    exclusion_pattern = True
+
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
-                                if build_require.name in package_build_requires:  # Override existing
-                                    # this is a way to have only one package Name for all versions
-                                    # (no conflicts)
-                                    # but the dict key is not used at all
-                                    package_build_requires[build_require.name] = build_require
-                                elif build_require.name != node.name:  # Profile one
-                                    new_profile_build_requires.append(build_require)
+                                if exclusion_pattern:
+                                    if build_require.name in package_build_requires:
+                                        del package_build_requires[build_require.name]
+                                    if build_require in new_profile_build_requires:
+                                        new_profile_build_requires.remove(build_require)
+                                else:
+                                    if build_require.name in package_build_requires:  # Override existing
+                                        # this is a way to have only one package Name for all versions
+                                        # (no conflicts)
+                                        # but the dict key is not used at all
+                                        package_build_requires[build_require.name] = build_require
+                                    elif build_require.name != node.name:  # Profile one
+                                        new_profile_build_requires.append(build_require)
 
             if package_build_requires:
                 subgraph = builder.extend_build_requires(graph, node,

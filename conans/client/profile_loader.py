@@ -107,6 +107,8 @@ def read_profile(profile_name, cwd, default_folder):
     try:
         return _load_profile(text, profile_path, default_folder)
     except ConanException as exc:
+        import traceback
+        traceback.print_stack()
         raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
 
@@ -159,8 +161,15 @@ def _load_single_build_require(profile, line):
     tokens = line.split(":", 1)
     if len(tokens) == 1:
         pattern, req_list = "*", line
+        if req_list.startswith("!"):
+            pattern = "!*"
+            req_list = req_list[1:]
     else:
         pattern, req_list = tokens
+        if req_list.startswith("!"):
+            pattern = "!" + pattern
+            req_list = req_list[1:]
+
     refs = [ConanFileReference.loads(reference.strip()) for reference in req_list.split(",")]
     profile.build_requires.setdefault(pattern, []).extend(refs)
 
