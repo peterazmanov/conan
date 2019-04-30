@@ -502,6 +502,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             info = tarfile.TarInfo(name=filename)
             info.type = tarfile.SYMTYPE
             info.linkname = dest
+            info.size = 0  # A symlink shouldn't have size
             tgz.addfile(tarinfo=info)
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
@@ -515,8 +516,26 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
+                if output:
+                    real_path = os.readlink(abs_path)
+                    if os.path.isabs(real_path):
+                        common_root = os.path.commonprefix([real_path, abs_path])
+                        if not os.path.normpath(common_root).startswith(os.path.normpath(dest_dir)):
+                            output.warn("Symlink of file '{}' points to '{}' that"
+                                        " it is outside the package".format(abs_path, real_path))
+                        else:
+                            output.warn("Symlink of file '{}' contains an absolute path to '{}',"
+                                        " this path might not exist when the package is installed"
+                                        " in a different machine.".format(abs_path, real_path))
+                    else:
+                        real_target = os.path.join(dest_dir, real_path)
+                        if not os.path.join(dest_dir, real_target):
+                            output.warn("Symlink '{}' is broken, "
+                                        "points to '{}'".format(abs_path, real_target))
+
                 info.type = tarfile.SYMTYPE
-                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
+                info.size = 0  # A symlink shouldn't have size
+                info.linkname = real_path  # @UndefinedVariable
                 tgz.addfile(tarinfo=info)
             else:
                 with open(abs_path, 'rb') as file_handler:
