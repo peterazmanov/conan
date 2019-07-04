@@ -209,8 +209,9 @@ class GraphLock(object):
                 if node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
-                    raise ConanException("Mistmatch between lock and graph:\nLock:  %s\nGraph: %s"
-                                         % (lock_node.pref.full_repr(), node.pref.full_repr()))
+                    output.info("Not updating node because it is not a modified one. "
+                                "lock and graph:\nLock:  %s\nGraph: %s"
+                                % (lock_node.pref.full_repr(), node.pref.full_repr()))
 
     def lock_node(self, node, requires):
         """ apply options and constraints on requirements of a node, given the information from
