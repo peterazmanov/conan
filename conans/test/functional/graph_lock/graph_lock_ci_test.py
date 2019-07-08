@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 import textwrap
 import unittest
 
@@ -475,6 +477,105 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
+
+    def test_incomplete_reference_in_lock(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                {req}
+                pass
+        """)
+        test_server = TestServer(users={"user": "mypass"})
+        client = TestClient(servers={"default": test_server},
+                            users={"default": [("user", "mypass")]})
+        client.run("config set general.revisions_enabled=True")
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        client.save({"conanfile.py": conanfile.format(req="")})
+        client.run("export . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(req='requires="PkgA/[*]@user/channel"')})
+        client.run("export . PkgB/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(req='requires="PkgA/[*]@user/channel"')})
+        client.run("export . PkgC/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(req='requires="PkgB/[*]@user/channel", '
+                                                          '"PkgC/[*]@user/channel"')})
+        client.run("export . PkgD/0.1@user/channel")
+        client.run("upload '*' --all -c")
+        client.run("graph lock PkgD/0.1@user/channel")
+
+        # Upload project lockfile (save to a folder)
+        main_lock_folder = tempfile.mkdtemp()
+        main_lockfile = os.path.join(main_lock_folder, "conan.lock")
+        shutil.copyfile(os.path.join(client.current_folder, "conan.lock"), main_lockfile)
+
+        # Do a change in A
+        client_a = TestClient(servers={"default": test_server},
+                              users={"default": [("user", "mypass")]})
+        client_a.run("config set general.revisions_enabled=True")
+        client_a.run("config set general.default_package_id_mode=full_package_mode")
+        client_a.save({"conanfile.py": conanfile.format(req='')})
+        shutil.copyfile(main_lockfile, os.path.join(client_a.current_folder, "conan.lock"))
+        client_a.run("graph clean-modified .")
+        client_a.run("create . PkgA/0.1@user/channel --lockfile")
+        client_a.run("upload PkgA/0.1@user/channel --all -c")
+        client_a.run("graph update-lock {} .".format(main_lockfile))  # Update main lock
+
+        # Go back to main orchestrator
+        client.run("graph build-order {} --json=build_order.json "
+                   "--build=missing".format(main_lockfile))
+        json_file = os.path.join(client.current_folder, "build_order.json")
+        to_build = json.loads(load(json_file))
+        pkg_ref_b = PackageReference.loads(to_build[0].pop(0)[1])
+        self.assertIn("PkgB/0.1", str(pkg_ref_b))
+        pkg_ref_c = PackageReference.loads(to_build[0].pop(0)[1])
+        self.assertIn("PkgC/0.1", str(pkg_ref_c))
+
+        # We build B and C in parallel, but C slave takes a bit longer to update the general lock
+        client_b = TestClient(servers={"default": test_server},
+                              users={"default": [("user", "mypass")]})
+        client_b.run("config set general.revisions_enabled=True")
+        client_b.run("config set general.default_package_id_mode=full_package_mode")
+        client_c = TestClient(servers={"default": test_server},
+                              users={"default": [("user", "mypass")]})
+        client_c.run("config set general.revisions_enabled=True")
+        client_c.run("config set general.default_package_id_mode=full_package_mode")
+
+        # Download project graph-locks
+        shutil.copyfile(main_lockfile, os.path.join(client_b.current_folder, "conan.lock"))
+        shutil.copyfile(main_lockfile, os.path.join(client_c.current_folder, "conan.lock"))
+
+        client_b.run("graph clean-modified .")
+        client_b.run("install %s --build=%s --lockfile ." % (pkg_ref_b.ref, pkg_ref_b.ref.name))
+        client_b.run("upload {} --all -c".format(pkg_ref_b.ref))
+        # Update project graph-lock with B
+        client_b.run("graph update-lock {} .".format(main_lockfile))  # Update main lock
+
+        client_c.run("install %s --build=%s --lockfile ." % (pkg_ref_c.ref, pkg_ref_c.ref.name))
+        client_c.run("upload {} --all -c".format(pkg_ref_c.ref))
+        # NOTE: We are not updating the main lock with C yet, but the binaries are there
+
+        # Go back to main orchestrator, because B ended.
+        client.run("graph build-order {} --json=build_order.json "
+                   "--build=missing".format(main_lockfile))
+        json_file = os.path.join(client.current_folder, "build_order.json")
+        to_build = json.loads(load(json_file))
+        # C is already uploaded, but not updated in the graph, it computes it is already built
+        # We have to build D now
+        pkg_ref_d = PackageReference.loads(to_build[0].pop(0)[1])
+        self.assertIn("PkgD/0.1", str(pkg_ref_d))
+
+        client_d = TestClient(servers={"default": test_server},
+                              users={"default": [("user", "mypass")]})
+        client_d.run("config set general.revisions_enabled=True")
+        client_d.run("config set general.default_package_id_mode=full_package_mode")
+
+        shutil.copyfile(main_lockfile, os.path.join(client_d.current_folder, "conan.lock"))
+        client_d.run("graph clean-modified .")
+        client_d.run("install %s --build=%s --lockfile ." % (pkg_ref_d.ref, pkg_ref_d.ref.name))
+
+        # Even not having C as modified, it works
+        self.assertIn("PkgD/0.1@user/channel: Package "
+                      "'796ad48223bc77300da71ec43a677250f8eccc09' created", client_d.out)
 
     def test_options(self):
         conanfile = textwrap.dedent("""
