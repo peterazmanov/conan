@@ -7,6 +7,7 @@ from conans.errors import ConanException, RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import list_folder_subdirs, load
 from conans.util.log import logger
@@ -104,8 +105,17 @@ def search_recipes(cache, pattern=None, ignorecase=True):
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-    subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-    refs = [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
+    sub_dirs = list_folder_subdirs(basedir=cache.store, level=4)
+    refs = []
+    # Gather the local revisions
+    for folder in sub_dirs:
+        ref = ConanFileReference.load_dir_repr(folder)
+        layout = cache.package_layout(ref)
+        if isinstance(layout, PackageCacheLayout):
+            rev = layout.recipe_revision()
+            ref = ref.copy_with_rev(rev)
+        refs.append(ref)
+
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, r)]

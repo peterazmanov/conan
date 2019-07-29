@@ -178,6 +178,6 @@ class RangeResolver(object):
         return None, None
 
     def _resolve_version(self, version_range, refs_found):
-        versions = {ref.version: ref for ref in refs_found}
+        versions = {ref.version: ref.copy_clear_rev() for ref in refs_found}
         result = satisfying(versions, version_range, self._result)
         return versions.get(result)
