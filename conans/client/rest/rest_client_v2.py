@@ -182,6 +182,7 @@ class RestV2Methods(RestCommonMethods):
                 self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
+                print("UPLOAD!: {}".format(self._put_headers))
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy, retry=retry,
                                 retry_wait=retry_wait,

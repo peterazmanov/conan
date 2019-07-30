@@ -124,6 +124,7 @@ class ClientCache(object):
 
     def read_put_headers(self):
         ret = {}
+        print("LEO HEADERS")
         if not os.path.exists(self.put_headers_path):
             save(self.put_headers_path, "")
             return ret
@@ -137,6 +138,7 @@ class ClientCache(object):
                     name = tmp[0].strip()
                     value = tmp[1].strip()
                     ret[str(name)] = str(value)
+            print("RETORNO HEADERS: {}".format(ret))
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)
