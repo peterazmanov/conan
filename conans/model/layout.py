@@ -49,6 +49,7 @@ class Folders(object):
         self.package = ""
         self.generators = ""
         self.imports = ""
+        self.exports_sources = None
 
     def __repr__(self):
         return str(self.__dict__)
@@ -129,3 +130,13 @@ class Folders(object):
 
     def set_base_imports(self, folder):
         self._base_imports = folder
+
+    @property
+    def exports_sources_folder(self):
+        if self.exports_sources is None:
+            return self.source_folder
+        if self._base_source is None:
+            return None
+
+        return os.path.join(self._base_source, self.exports_sources)
+

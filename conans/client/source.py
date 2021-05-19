@@ -107,7 +107,7 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
                 # so self exported files have precedence over python_requires ones
                 merge_directories(export_folder, conanfile.source_folder)
                 # Now move the export-sources to the right location
-                merge_directories(export_source_folder, conanfile.source_folder)
+                merge_directories(export_source_folder, conanfile.exports_sources_folder)
 
             _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                         get_sources_from_exports=get_sources_from_exports)

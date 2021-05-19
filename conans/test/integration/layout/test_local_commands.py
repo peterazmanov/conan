@@ -357,3 +357,106 @@ def test_imports():
     bfolder = client.cache.package_layout(ref).build(pref)
     imports_folder = os.path.join(bfolder, "my_imports")
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out
+
+
+def test_exports_sources_subfolder():
+    """If we have the sources in src/xxx we can declare make the layout to follow it"""
+    client = TestClient()
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                                   .with_name("foo").with_version("1.0")
+                                   .with_import("import os"))
+    conan_file += """
+    exports_sources = "src*"
+
+    def layout(self):
+        self.folders.source = "src"
+        self.folders.exports_sources = "."  # relative to base source
+
+    def build(self):
+        self.output.warn(self.source_folder)
+        assert os.path.exists(os.path.join(self.source_folder, "main.cpp"))
+    """
+
+    client.save({"conanfile.py": conan_file, "src/main.cpp": "foo"})
+    client.run("create .")
+    sf = client.cache.package_layout(ConanFileReference.loads("foo/1.0")).source()
+    assert os.path.exists(os.path.join(sf, "src", "main.cpp"))
+    assert not os.path.exists(os.path.join(sf, "src", "src", "main.cpp"))
+
+
+def test_exports_sources_subfolder_default():
+    """By default if we don't declare self.folders.exports_sources, all the exports_sources are
+     copied to the full conanfile.source_folder"""
+    client = TestClient()
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                                   .with_name("foo").with_version("1.0")
+                                   .with_import("import os"))
+    conan_file += """
+    exports_sources = "src*"
+
+    def layout(self):
+        self.folders.source = "src"
+
+    def build(self):
+        self.output.warn(self.source_folder)
+        assert os.path.exists(os.path.join(self.source_folder, "src", "main.cpp"))
+    """
+
+    client.save({"conanfile.py": conan_file, "src/main.cpp": "foo"})
+    client.run("create .")
+    sf = client.cache.package_layout(ConanFileReference.loads("foo/1.0")).source()
+    assert not os.path.exists(os.path.join(sf, "src", "main.cpp"))
+    assert os.path.exists(os.path.join(sf, "src", "src", "main.cpp"))
+
+
+def test_exports_sources_default_with_export_sources_method():
+    """By default if we don't declare self.folders.exports_sources, all the exports_sources are
+     copied to the full conanfile.source_folder"""
+    client = TestClient()
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                                   .with_name("foo").with_version("1.0")
+                                   .with_import("import os"))
+    conan_file += """
+
+    def export_sources(self):
+        self.copy("src/*")
+        assert self.exports_sources_folder == self.source_folder
+
+    def layout(self):
+        self.folders.source = "src"
+
+    def build(self):
+        self.output.warn(self.source_folder)
+        assert os.path.exists(os.path.join(self.source_folder, "src", "main.cpp"))
+    """
+
+    client.save({"conanfile.py": conan_file, "src/main.cpp": "foo"})
+    client.run("create .")
+
+
+def test_exports_sources_declared_with_export_sources_method():
+    """By default if we don't declare self.folders.exports_sources, all the exports_sources are
+     copied to the full conanfile.source_folder"""
+    client = TestClient()
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                                   .with_name("foo").with_version("1.0")
+                                   .with_import("import os"))
+    conan_file += """
+
+    def export_sources(self):
+        self.copy("src/*")
+
+    def layout(self):
+        self.folders.source = "src"
+        self.folders.exports_sources = "."
+
+    def build(self):
+        self.output.warn(self.source_folder)
+        assert os.path.exists(os.path.join(self.source_folder, "main.cpp"))
+    """
+
+    client.save({"conanfile.py": conan_file, "src/main.cpp": "foo"})
+    client.run("create .")
+    sf = client.cache.package_layout(ConanFileReference.loads("foo/1.0")).source()
+    assert os.path.exists(os.path.join(sf, "src", "main.cpp"))
+    assert not os.path.exists(os.path.join(sf, "src", "src", "main.cpp"))

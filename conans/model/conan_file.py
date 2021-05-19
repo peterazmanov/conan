@@ -287,6 +287,10 @@ class ConanFile(object):
         self.folders.set_base_imports(folder)
 
     @property
+    def exports_sources_folder(self):
+        return self.folders.exports_sources_folder
+
+    @property
     def env(self):
         """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
         self._conan_env_values, user specified from profiles or -e first, then inherited)"""
