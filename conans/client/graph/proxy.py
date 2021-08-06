@@ -59,6 +59,9 @@ class ConanProxy(object):
 
         check_updates = check_updates or update
         requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
+        output.info("!! requesting different revision: {}".format(requested_different_revision))
+        output.info("!! check updates: {}".format(check_updates))
+        output.info("!! selected remote: {}".format(selected_remote))
         if requested_different_revision:
             if check_updates or self._cache.new_config["core:allow_explicit_revision_update"]:
                 remote, new_ref = self._download_recipe(layout, ref, output, remotes,
@@ -84,14 +87,18 @@ class ConanProxy(object):
 
         try:  # get_recipe_manifest can fail, not in server
             upstream_manifest, ref = self._remote_manager.get_recipe_manifest(ref, selected_remote)
+            output.info("!! got recipe manifest")
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
             ref = ref.copy_with_rev(cur_revision)
             return conanfile_path, status, selected_remote, ref
 
         read_manifest = layout.recipe_manifest()
+        output.info("!! Comparing manifests. remote {} local {}".format(upstream_manifest.time,
+                                                                        read_manifest.time))
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
+                output.info("!! remote newer")
                 if update:
                     DiskRemover().remove_recipe(layout, output=output)
                     output.info("Retrieving from remote '%s'..." % selected_remote.name)
@@ -101,10 +108,12 @@ class ConanProxy(object):
                 else:
                     status = RECIPE_UPDATEABLE
             else:
+                output.info("!! local newer")
                 status = RECIPE_NEWER
         else:
+            output.info("!! I use the local, same manifest we have")
             status = RECIPE_INCACHE
-
+        output.info("!! Exit function with status: {}".format(status))
         ref = ref.copy_with_rev(cur_revision)
         return conanfile_path, status, selected_remote, ref
 
