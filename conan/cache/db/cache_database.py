@@ -29,6 +29,9 @@ class CacheDatabase:
     def delete_ref_by_path(self, path):
         self._references.delete_by_path(path)
 
+    def path_already_used(self, ref, path):
+        return self._references.path_already_used(ref, path)
+
     def remove(self, ref: ConanReference):
         self._references.remove(ref)
 

@@ -210,7 +210,7 @@ class _PackageBuilder(object):
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
         with tools.chdir(base_build):
-            self._output.info('Building your package in %s' % base_build)
+            self._output.info('Building your package in tmp folder: %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
                     conanfile.folders.set_base_source(base_source)
@@ -487,14 +487,7 @@ class BinaryInstaller(object):
 
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
-        if processed_prev is None:  # This package-id has not been processed before
-            if not pkg_layout:
-                if pref.revision:
-                    raise ConanException("should this happen?")
-                    pkg_layout = self._cache.pkg_layout(pref)
-                else:
-                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
-        else:
+        if processed_prev is not None:  # This package-id has not been processed before
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
@@ -525,7 +518,9 @@ class BinaryInstaller(object):
 
             # at this point the package reference should be complete
             if pkg_layout.reference != pref:
-                self._cache.assign_prev(pkg_layout, ConanReference(pref))
+                self._cache.assign_prev(ConanReference(pkg_layout.reference), ConanReference(pref))
+                pkg_layout = self._cache.pkg_layout(pref)
+                output.success('Package revision moved to: {}'.format(pkg_layout.package()))
 
             package_folder = pkg_layout.package()
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"

@@ -60,10 +60,10 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
+    def update_reference(self, ref: ConanReference, new_ref: ConanReference = None,
                          new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
         new_ref = ConanReference(new_ref) if new_ref else None
-        return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
+        return self._data_cache.update_reference(ConanReference(ref), new_ref, new_path,
                                                  new_remote, new_timestamp, new_build_id)
 
     def dump(self):
@@ -71,11 +71,11 @@ class ClientCache(object):
         self._data_cache.dump(out)
         return out.getvalue()
 
-    def assign_rrev(self, layout: RecipeLayout, ref: ConanReference):
-        return self._data_cache.assign_rrev(layout, ref)
+    def assign_rrev(self, old_ref: ConanReference, ref: ConanReference):
+        return self._data_cache.assign_rrev(old_ref, ref)
 
-    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
-        return self._data_cache.assign_prev(layout, ref)
+    def assign_prev(self, old_ref: ConanReference, ref: ConanReference):
+        return self._data_cache.assign_prev(old_ref, ref)
 
     def ref_layout(self, ref):
         return self._data_cache.get_reference_layout(ConanReference(ref))

@@ -137,8 +137,8 @@ class CommandOutputer(object):
                 pref_build_id = build_id(conanfile) or package_id
                 pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
                 pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
-                item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
-                item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
+                item_data["build_folder"] = self._cache.pkg_layout(pref_build).build()
+                item_data["package_folder"] = self._cache.pkg_layout(pref_package).package()
 
             try:
                 reg_remote = self._cache.get_remote(ref)

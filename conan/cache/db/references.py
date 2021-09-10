@@ -31,6 +31,7 @@ class ReferencesDbTable(BaseDbTable):
         }
 
     def _where_clause(self, ref: ConanReference):
+        """To check if the ref is there"""
         where_dict = {
             self.columns.reference: ref.reference,
             self.columns.rrev: ref.rrev,
@@ -39,6 +40,18 @@ class ReferencesDbTable(BaseDbTable):
         }
         where_expr = ' AND '.join(
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
+        return where_expr
+
+    def _not_where_clause(self, ref: ConanReference):
+        """To check if the ref is not there"""
+        where_dict = {
+            self.columns.reference: ref.reference,
+            self.columns.rrev: ref.rrev,
+            self.columns.pkgid: ref.pkgid,
+            self.columns.prev: ref.prev,
+        }
+        where_expr = ' OR '.join(
+            [f'{k}!="{v}" ' if v is not None else f'{k} IS NOT NULL' for k, v in where_dict.items()])
         return where_expr
 
     def _set_clause(self, ref: ConanReference, path=None, timestamp=None, remote=None,
@@ -108,6 +121,17 @@ class ReferencesDbTable(BaseDbTable):
                 f"WHERE path = ?;"
         r = self._conn.execute(query, (path,))
         return r.lastrowid
+
+    def path_already_used(self, ref, path):
+        """Check if path is used in a different ref"""
+        where_clause = self._not_where_clause(ref)
+        query = f"SELECT * FROM {self.table_name} " \
+                f"WHERE path = ? AND (?);"
+        r = self._conn.execute(query, (path, where_clause))
+        row = r.fetchone()
+        if not row:
+            return False
+        return True
 
     def remove(self, ref: ConanReference):
         where_clause = self._where_clause(ref)

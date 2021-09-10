@@ -38,7 +38,7 @@ class AliasConanfile(ConanFile):
     rrev = calc_revision(output=output, path=None, manifest=manifest, revision_mode=revision_mode)
 
     ref_with_rrev = alias_ref.copy_with_rev(rrev)
-    cache.assign_rrev(alias_layout, ConanReference(ref_with_rrev))
+    cache.assign_rrev(ConanReference(alias_layout.reference), ConanReference(ref_with_rrev))
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel,
@@ -111,7 +111,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
                              revision_mode=conanfile.revision_mode)
 
     ref = ref.copy_with_rev(revision=revision)
-    cache.assign_rrev(recipe_layout, ConanReference(ref))
+    cache.assign_rrev(ConanReference(recipe_layout.reference), ConanReference(ref))
+    recipe_layout = cache.ref_layout(ref)
     # TODO: cache2.0 check if this is the message we want to output
     output.success('A new %s version was exported' % CONANFILE)
     output.info('Folder: %s' % recipe_layout.export())
