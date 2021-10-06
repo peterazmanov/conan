@@ -2,6 +2,7 @@ import json
 import unittest
 from collections import OrderedDict
 
+import tools
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -375,3 +376,19 @@ class ConanLib(ConanFile):
 
         # Now try to skip without specifying user
         client.run("user -r default -p BAD_PASS --skip-auth")
+
+
+    def test_unauthenticated_read_permissions(self):
+        test_server = TestServer(users={"lasote": "password"},
+                                 read_permissions=[("*/*@*/*", "*")])
+        servers = {"default": test_server}
+        # Client to push some packages
+        write_client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        write_client.run("new foo/1.0 --bare")
+        write_client.run("create . @lasote/stable")
+        write_client.run("upload foo* -c -r default --all")
+
+        # Client without users configured to authenticate with the server
+        client_read = TestClient(servers=servers)
+        with tools.environment_append({"CONAN_NON_INTERACTIVE": "1"}):
+            client_read.run("install foo/1.0@lasote/stable")
