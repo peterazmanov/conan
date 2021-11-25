@@ -491,3 +491,75 @@ def test_multiple_deactivate():
     assert 2 == str(out).count("Restoring environment")
     assert "VAR1=!!" in out
     assert "VAR2=!!" in out
+
+def test_if_shim_are_necessary():
+    """
+       app --(build tool require)--> cmake
+            \\ ---(build tool require) --> protobuf (to call protoc)
+              \\  ---require --> protobuff (to link with libprotobuf)
+    """
+    client = TestClient()
+
+    # Create the cmake package
+    cmake_sh = textwrap.dedent("""\
+            echo "Running my cmake: $CMAKE_DURING_RUN"
+            protoc.sh
+    """)
+    cmake = textwrap.dedent(r"""
+        import os
+        from conans import ConanFile
+        from conan.tools.files import chdir
+        class Pkg(ConanFile):
+            exports_sources = "cmake.bat", "cmake.sh"
+            def package(self):
+                self.copy("*", dst="bin")
+                with chdir(self, os.path.join(self.package_folder, "bin")):
+                    os.chmod("cmake.sh", 0o777)
+            def package_info(self):
+                self.buildenv_info.append("CMAKE_DURING_BUILD", "foo")
+                self.runenv_info.append("CMAKE_DURING_RUN", "foo")
+        """)
+    client.save({"conanfile.py": cmake, "cmake.sh": cmake_sh})
+    client.run("create . cmake/1.0@")
+
+    # Create the protobuf package
+    protoc_sh = textwrap.dedent("""\
+                echo "Running my protoc: $PROTOC_DURING_RUN"
+        """)
+    protobuff = textwrap.dedent(r"""
+            import os
+            from conans import ConanFile
+            from conan.tools.files import chdir
+            class Pkg(ConanFile):
+                exports_sources = "protoc.bat", "protoc.sh"
+
+                def package(self):
+                    self.copy("*", dst="bin")
+                    with chdir(self, os.path.join(self.package_folder, "bin")):
+                        os.chmod("protoc.sh", 0o777)
+
+                def package_info(self):
+                    self.buildenv_info.append("PROTOC_DURING_BUILD", "bar")
+                    self.runenv_info.append("PROTOC_DURING_RUN", "bar")
+            """)
+    client.save({"conanfile.py": protobuff,  "protoc.sh": protoc_sh})
+    client.run("create . protobuff/1.0@")
+
+    # Create the app, that will call "cmake" at the build to locate the protoc
+    app = textwrap.dedent(r"""
+                from conans import ConanFile
+                from conan.tools.env import VirtualRunEnv
+                class Pkg(ConanFile):
+                    settings = "os"
+                    build_requires = "cmake/1.0", "protobuff/1.0"
+                    requires = "protobuff/1.0"
+                    generators = "VirtualRunEnv", "VirtualBuildEnv"
+
+                    def build(self):
+                        self.run("cmake.sh")
+                """)
+    client.save({"conanfile.py": app})
+    client.run("create . app/1.0@ -pr:b=default -pr:h=default")
+    assert "Running my cmake:  foo\nRunning my protoc:  bar" in client.out
+
+
