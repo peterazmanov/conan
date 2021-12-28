@@ -424,6 +424,7 @@ class FindFiles(Block):
         {% endif %}
 
         {% if cross_building %}
+        # So cmake use CMAKE_FIND_ROOT_PATH from user toolchain (priority) but also CMAKE_PREFIX_PATH
         set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
         set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
         set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
