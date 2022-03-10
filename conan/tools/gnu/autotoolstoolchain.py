@@ -21,7 +21,6 @@ class AutotoolsToolchain:
         self.make_args = []
         self.default_configure_install_args = True
 
-        # TODO: compiler.runtime for Visual studio?
         # defines
         self.ndebug = None
         if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
@@ -54,6 +53,15 @@ class AutotoolsToolchain:
         subsystem = conanfile.settings.get_safe("os.subsystem")
 
         self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
+
+        if is_msvc(self._conanfile):
+            if build_type != "Debug":
+                values = {"static": "MT", "dynamic": "MD"}
+            else:
+                values = {"static": "MTd", "dynamic": "MDd"}
+            runtime = values.get(conanfile.settings.get_safe("compiler.runtime"))
+            if runtime:
+                self.msvc_runtime_flag = "-{}".format(runtime)
 
         if cross_building(self._conanfile):
             os_host = conanfile.settings.get_safe("os")
@@ -121,6 +129,10 @@ class AutotoolsToolchain:
         if self.fpic:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
+
+        if self.msvc_runtime_flag:
+            self.cxxflags.append(self.msvc_runtime_flag)
+            self.cflags.append(self.msvc_runtime_flag)
 
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
