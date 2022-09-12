@@ -214,12 +214,13 @@ def test_conf_inherited_in_test_package():
 
                         def build(self):
                             self.output.warning(self.conf["tools.microsoft.bash:subsystem"])
-                            self.run("foo")
+                            self.run('echo "Im running!"')
 
                         def test(self):
                             pass
             """)
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-    # THIS SHOULD WORK
-    client.run("create .", assert_error=True)
-    assert "are needed to run commands in a Windows subsystem" in client.out
+    client.run("create .")
+    assert "are needed to run commands in a Windows subsystem" not in client.out
+    assert "Im running!" in client.out
+
